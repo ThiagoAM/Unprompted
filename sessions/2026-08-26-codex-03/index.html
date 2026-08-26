@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A generative atlas of places that do not exist.">
+  <title>Drift Atlas</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --night: #071417;
+      --panel: #0b1b1e;
+      --paper: #e2d7b7;
+      --paper-dim: #a99f84;
+      --copper: #c6804d;
+      --line: rgba(226, 215, 183, 0.16);
+      --line-strong: rgba(226, 215, 183, 0.32);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 78% 18%, rgba(34, 89, 91, 0.18), transparent 28rem),
+        var(--night);
+      color: var(--paper);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .shell {
+      width: min(100%, 108rem);
+      min-height: 100vh;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(13rem, 18rem) minmax(30rem, 1fr) minmax(14rem, 20rem);
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .masthead {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      min-height: 100vh;
+      padding: clamp(2rem, 4vw, 4.5rem) clamp(1.5rem, 3vw, 3rem);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kicker,
+    .chart-meta,
+    .panel-label,
+    .coordinate,
+    .page-note,
+    .gazetteer button span,
+    .keys {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.67rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .kicker { color: var(--copper); }
+
+    h1 {
+      max-width: 6ch;
+      margin: 1.4rem 0 1.2rem;
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: clamp(4.6rem, 7.5vw, 8.5rem);
+      font-weight: 400;
+      letter-spacing: -0.075em;
+      line-height: 0.76;
+    }
+
+    .dek {
+      max-width: 15rem;
+      margin: 0;
+      color: var(--paper-dim);
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: 1.08rem;
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    .compass {
+      position: relative;
+      width: 4.25rem;
+      height: 4.25rem;
+      margin-top: auto;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+    }
+
+    .compass::before,
+    .compass::after {
+      content: "";
+      position: absolute;
+      inset: 50% auto auto 50%;
+      background: var(--line-strong);
+      transform: translate(-50%, -50%);
+    }
+
+    .compass::before { width: 1px; height: 5.35rem; }
+    .compass::after { width: 5.35rem; height: 1px; }
+
+    .needle {
+      position: absolute;
+      left: 50%;
+      top: 0.38rem;
+      width: 0;
+      height: 0;
+      border-left: 0.28rem solid transparent;
+      border-right: 0.28rem solid transparent;
+      border-bottom: 1.8rem solid var(--copper);
+      transform: translateX(-50%);
+      filter: drop-shadow(0 0 0.35rem rgba(198, 128, 77, 0.3));
+    }
+
+    .needle::after {
+      content: "";
+      position: absolute;
+      left: -0.2rem;
+      top: 1.72rem;
+      border-left: 0.2rem solid transparent;
+      border-right: 0.2rem solid transparent;
+      border-top: 1.45rem solid var(--paper-dim);
+    }
+
+    .north {
+      position: absolute;
+      top: -1.25rem;
+      left: 50%;
+      color: var(--copper);
+      font: 0.58rem/1 ui-monospace, monospace;
+      transform: translateX(-50%);
+    }
+
+    .chart-header {
+      grid-column: 2;
+      grid-row: 1;
+      min-width: 0;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .chart-meta { color: var(--paper-dim); }
+    .chart-meta strong { color: var(--paper); font-weight: 500; }
+
+    .turn-page {
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      padding: 0.6rem 0.95rem;
+      color: var(--paper);
+      background: transparent;
+      cursor: pointer;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.67rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+    }
+
+    .turn-page:hover,
+    .turn-page:focus-visible {
+      border-color: var(--copper);
+      color: #ffd5b3;
+      background: rgba(198, 128, 77, 0.1);
+      outline: none;
+    }
+
+    .chart {
+      position: relative;
+      grid-column: 2;
+      grid-row: 2;
+      min-width: 0;
+      min-height: 31rem;
+      overflow: hidden;
+      background: #0c252a;
+      cursor: crosshair;
+      isolation: isolate;
+    }
+
+    .chart::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      box-shadow: inset 0 0 5rem rgba(0, 0, 0, 0.28);
+      background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 4px);
+      mix-blend-mode: overlay;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .readout {
+      position: absolute;
+      left: 1.1rem;
+      bottom: 1.1rem;
+      z-index: 4;
+      min-width: 10rem;
+      padding: 0.75rem 0.85rem;
+      border: 1px solid rgba(226, 215, 183, 0.25);
+      background: rgba(7, 20, 23, 0.78);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .coordinate { color: var(--paper-dim); }
+    .terrain {
+      margin-top: 0.32rem;
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: 1rem;
+      font-style: italic;
+    }
+
+    .side {
+      grid-column: 3;
+      grid-row: 1 / 3;
+      min-height: 100vh;
+      padding: clamp(2rem, 4vw, 4.5rem) clamp(1.35rem, 2.5vw, 2.5rem);
+      border-left: 1px solid var(--line);
+      overflow: auto;
+    }
+
+    .panel-label { color: var(--copper); }
+
+    .gazetteer {
+      margin: 1.25rem 0 3.5rem;
+      padding: 0;
+      list-style: none;
+      border-top: 1px solid var(--line);
+    }
+
+    .gazetteer li { border-bottom: 1px solid var(--line); }
+
+    .gazetteer button {
+      width: 100%;
+      padding: 0.95rem 0;
+      border: 0;
+      color: var(--paper);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .gazetteer button b {
+      display: block;
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: 1.08rem;
+      font-weight: 400;
+      line-height: 1.15;
+    }
+
+    .gazetteer button span {
+      display: block;
+      margin-top: 0.3rem;
+      color: var(--paper-dim);
+      font-size: 0.57rem;
+    }
+
+    .gazetteer button:hover b,
+    .gazetteer button:focus-visible b { color: #ffd5b3; }
+    .gazetteer button:focus-visible { outline: 1px solid var(--copper); outline-offset: 5px; }
+
+    blockquote {
+      margin: 1.25rem 0 0;
+      color: var(--paper-dim);
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: 1.06rem;
+      font-style: italic;
+      line-height: 1.55;
+    }
+
+    blockquote::before { content: "“"; color: var(--copper); }
+    blockquote::after { content: "”"; color: var(--copper); }
+
+    .footer {
+      grid-column: 2;
+      grid-row: 3;
+      padding: 0.85rem 1.5rem;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--paper-dim);
+    }
+
+    .keys { text-transform: none; letter-spacing: 0.02em; }
+
+    @media (max-width: 67rem) {
+      .shell { grid-template-columns: 12rem minmax(27rem, 1fr); }
+      .side {
+        grid-column: 1 / 3;
+        grid-row: 4;
+        min-height: 0;
+        border-top: 1px solid var(--line);
+        border-left: 0;
+      }
+      .gazetteer { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .gazetteer li { padding-right: 1rem; }
+    }
+
+    @media (max-width: 43rem) {
+      .shell { display: block; }
+      .masthead {
+        min-height: 0;
+        padding: 2.5rem 1.25rem 2rem;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      h1 { max-width: none; font-size: clamp(4.5rem, 23vw, 7rem); }
+      .dek { max-width: 24rem; }
+      .compass { display: none; }
+      .chart-header { padding-inline: 1rem; }
+      .chart { min-height: 68vh; }
+      .side { padding: 2.5rem 1.25rem; }
+      .gazetteer { grid-template-columns: 1fr 1fr; }
+      .footer { padding-inline: 1rem; }
+      .keys { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div class="kicker">Unsurveyed territories / folio 01</div>
+      <h1>Drift Atlas</h1>
+      <p class="dek">Cartography for places that do not need to exist.</p>
+      <div class="compass" aria-hidden="true"><span class="north">N</span><span class="needle"></span></div>
+    </header>
+
+    <div class="chart-header">
+      <div class="chart-meta">Chart <strong id="chart-name">—</strong> · seed <strong id="seed">—</strong></div>
+      <button class="turn-page" id="turn-page" type="button">Turn the page</button>
+    </div>
+
+    <section class="chart" id="chart" aria-label="Generated topographic map">
+      <canvas id="map"></canvas>
+      <div class="readout" aria-live="polite">
+        <div class="coordinate" id="coordinate">18° 00′ N · 42° 00′ W</div>
+        <div class="terrain" id="terrain">Move across the chart</div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel-label">Gazetteer</div>
+      <ol class="gazetteer" id="gazetteer"></ol>
+      <div class="panel-label">From the margin</div>
+      <blockquote id="field-note">No coast is final on a first chart.</blockquote>
+    </aside>
+
+    <footer class="footer">
+      <span class="page-note">A field guide to nowhere · 2026</span>
+      <span class="keys">move to read · select a name to locate</span>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.querySelector("#map");
+      const chart = document.querySelector("#chart");
+      const ctx = canvas.getContext("2d");
+      const seedEl = document.querySelector("#seed");
+      const nameEl = document.querySelector("#chart-name");
+      const gazetteer = document.querySelector("#gazetteer");
+      const fieldNote = document.querySelector("#field-note");
+      const coordinate = document.querySelector("#coordinate");
+      const terrain = document.querySelector("#terrain");
+      const turnPage = document.querySelector("#turn-page");
+
+      const palette = {
+        abyss: [7, 25, 31], deep: [10, 42, 49], shelf: [21, 67, 71],
+        shoal: [57, 94, 88], sand: [184, 170, 127], low: [118, 132, 93],
+        field: [91, 111, 79], high: [91, 91, 67], rock: [143, 128, 94],
+        snow: [220, 210, 180]
+      };
+
+      const notes = [
+        "The western water is shallower than the sounding line suggests.",
+        "Three birds followed the survey boat, then turned north without reason.",
+        "At dusk the high ground keeps the sun several minutes longer.",
+        "The inlet vanishes at low tide; the name may outlast the water.",
+        "A warm current crosses the reef here, carrying leaves from no known shore.",
+        "The stone on the summit rings faintly when struck.",
+        "No coast is final on a first chart.",
+        "The crew disagreed about whether the light inland was fire or weather.",
+        "Soundings taken twice returned two different depths. Both are entered.",
+        "We left this bay unnamed. By morning it had acquired one."
+      ];
+
+      const chartFirst = ["Aster", "Bracken", "Copper", "Distant", "Eider", "Fallow", "Glass", "Hollow", "Ivory", "Juniper", "Kestrel", "Littoral", "Morrow", "North", "Orison", "Pale", "Quiet", "Rook", "Sable", "Tern"];
+      const chartLast = ["Archipelago", "Chart", "Coast", "Drift", "Expanse", "Isles", "Marches", "Passage", "Reach", "Sound", "Survey", "Waters"];
+      const roots = ["Alder", "Ansel", "Arden", "Aster", "Beryl", "Bracken", "Cairn", "Cinder", "Corren", "Dunlin", "Eider", "Elowen", "Fallow", "Glass", "Harrow", "Ilex", "Juniper", "Kestrel", "Lumen", "Marlow", "Nacre", "Orison", "Plover", "Quiet", "Ravel", "Sable", "Tern", "Umber", "Vesper", "Wren"];
+      const suffixes = ["Bay", "Cape", "Haven", "Inlet", "Point", "Reach", "Sound", "Strait", "Vale", "Watch"];
+
+      let width = 0;
+      let height = 0;
+      let activeSeed = "";
+      let seedNumber = 0;
+      let features = [];
+      let spotlight = null;
+      let elevationAt = () => 0;
+
+      function hashText(text) {
+        let h = 2166136261;
+        for (let i = 0; i < text.length; i++) {
+          h ^= text.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return h >>> 0;
+      }
+
+      function mulberry32(seed) {
+        return () => {
+          let t = seed += 0x6D2B79F5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+      }
+
+      function lattice(x, y, seed) {
+        let n = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 69069);
+        n = Math.imul(n ^ n >>> 13, 1274126177);
+        return ((n ^ n >>> 16) >>> 0) / 4294967295;
+      }
+
+      const smooth = t => t * t * (3 - 2 * t);
+      const mix = (a, b, t) => a + (b - a) * t;
+
+      function noise(x, y, seed) {
+        const ix = Math.floor(x), iy = Math.floor(y);
+        const fx = smooth(x - ix), fy = smooth(y - iy);
+        return mix(
+          mix(lattice(ix, iy, seed), lattice(ix + 1, iy, seed), fx),
+          mix(lattice(ix, iy + 1, seed), lattice(ix + 1, iy + 1, seed), fx),
+          fy
+        );
+      }
+
+      function buildElevation(seed) {
+        const rand = mulberry32(seed ^ 0x913af31);
+        const centers = Array.from({ length: 4 }, () => ({
+          x: 0.18 + rand() * 0.64,
+          y: 0.16 + rand() * 0.68,
+          rx: 0.2 + rand() * 0.24,
+          ry: 0.2 + rand() * 0.25,
+          weight: 0.62 + rand() * 0.28
+        }));
+        return (x, y) => {
+          let fractal = 0;
+          let amp = 0.52;
+          let scale = 2.15;
+          let total = 0;
+          for (let octave = 0; octave < 5; octave++) {
+            fractal += noise(x * scale, y * scale, seed + octave * 977) * amp;
+            total += amp;
+            amp *= 0.5;
+            scale *= 2.07;
+          }
+          fractal /= total;
+          let land = 0;
+          for (const c of centers) {
+            const dx = (x - c.x) / c.rx;
+            const dy = (y - c.y) / c.ry;
+            land = Math.max(land, Math.max(0, 1 - (dx * dx + dy * dy)) * c.weight);
+          }
+          const edge = Math.min(1, Math.min(x, 1 - x, y, 1 - y) * 6.5);
+          return Math.max(0, Math.min(1, fractal * 0.66 + land * 0.61 - 0.25 + edge * 0.07));
+        };
+      }
+
+      function colorFor(h, grain) {
+        let a, b, t;
+        if (h < 0.24) [a, b, t] = [palette.abyss, palette.deep, h / 0.24];
+        else if (h < 0.38) [a, b, t] = [palette.deep, palette.shelf, (h - 0.24) / 0.14];
+        else if (h < 0.435) [a, b, t] = [palette.shelf, palette.shoal, (h - 0.38) / 0.055];
+        else if (h < 0.47) [a, b, t] = [palette.sand, palette.low, (h - 0.435) / 0.035];
+        else if (h < 0.61) [a, b, t] = [palette.low, palette.field, (h - 0.47) / 0.14];
+        else if (h < 0.75) [a, b, t] = [palette.field, palette.high, (h - 0.61) / 0.14];
+        else if (h < 0.88) [a, b, t] = [palette.high, palette.rock, (h - 0.75) / 0.13];
+        else [a, b, t] = [palette.rock, palette.snow, (h - 0.88) / 0.12];
+        const shade = grain * 8 - 4;
+        return a.map((v, i) => Math.max(0, Math.min(255, Math.round(mix(v, b[i], t) + shade))));
+      }
+
+      function makeFeatures(rand) {
+        const candidates = [];
+        for (let gy = 2; gy < 25; gy++) {
+          for (let gx = 2; gx < 33; gx++) {
+            const x = gx / 35 + (rand() - 0.5) * 0.018;
+            const y = gy / 27 + (rand() - 0.5) * 0.018;
+            const h = elevationAt(x, y);
+            let kind = null;
+            let priority = 0;
+            if (h > 0.78) { kind = "summit"; priority = h + 0.3; }
+            else if (h > 0.62) { kind = "highland"; priority = h; }
+            else if (h > 0.455 && h < 0.51) { kind = "shore"; priority = 0.82 - Math.abs(h - 0.475); }
+            else if (h > 0.53) { kind = "interior"; priority = h - 0.08; }
+            if (kind) candidates.push({ x, y, h, kind, priority: priority + rand() * 0.14 });
+          }
+        }
+        candidates.sort((a, b) => b.priority - a.priority);
+        const chosen = [];
+        for (const point of candidates) {
+          if (chosen.every(other => Math.hypot(point.x - other.x, point.y - other.y) > 0.17)) {
+            chosen.push(point);
+            if (chosen.length === 6) break;
+          }
+        }
+        chosen.sort((a, b) => a.y - b.y);
+        return chosen.map((point, index) => {
+          const root = roots[(Math.floor(rand() * roots.length) + index * 7) % roots.length];
+          let name;
+          if (point.kind === "summit") name = `Mount ${root}`;
+          else if (point.kind === "highland") name = `${root} Heights`;
+          else if (point.kind === "shore") name = `${root} ${suffixes[Math.floor(rand() * suffixes.length)]}`;
+          else name = `${root} Vale`;
+          return { ...point, name };
+        });
+      }
+
+      function terrainName(h) {
+        if (h < 0.24) return "the open deep";
+        if (h < 0.38) return "blue water";
+        if (h < 0.435) return "shoal water";
+        if (h < 0.47) return "tidal ground";
+        if (h < 0.61) return "low country";
+        if (h < 0.75) return "rising ground";
+        if (h < 0.88) return "the high country";
+        return "bare summit";
+      }
+
+      function lineSegments(level, values, cols, rows) {
+        const points = [];
+        const lookup = {
+          1: [[3, 0]], 2: [[0, 1]], 3: [[3, 1]], 4: [[1, 2]],
+          5: [[3, 2], [0, 1]], 6: [[0, 2]], 7: [[3, 2]], 8: [[2, 3]],
+          9: [[0, 2]], 10: [[0, 3], [1, 2]], 11: [[1, 2]],
+          12: [[1, 3]], 13: [[0, 1]], 14: [[3, 0]]
+        };
+        const edgePoint = (edge, x, y, vals) => {
+          const corners = [[0,0],[1,0],[1,1],[0,1]];
+          const pair = [[0,1],[1,2],[2,3],[3,0]][edge];
+          const va = vals[pair[0]], vb = vals[pair[1]];
+          const t = va === vb ? 0.5 : (level - va) / (vb - va);
+          return [
+            (x + mix(corners[pair[0]][0], corners[pair[1]][0], t)) / cols * width,
+            (y + mix(corners[pair[0]][1], corners[pair[1]][1], t)) / rows * height
+          ];
+        };
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const vals = [values[y][x], values[y][x + 1], values[y + 1][x + 1], values[y + 1][x]];
+            const state = vals.reduce((sum, value, i) => sum | (value > level ? 1 << i : 0), 0);
+            for (const segment of lookup[state] || []) {
+              points.push([edgePoint(segment[0], x, y, vals), edgePoint(segment[1], x, y, vals)]);
+            }
+          }
+        }
+        return points;
+      }
+
+      function drawContours() {
+        const cols = 82;
+        const rows = 64;
+        const values = Array.from({ length: rows + 1 }, (_, y) => {
+          const row = new Float32Array(cols + 1);
+          for (let x = 0; x <= cols; x++) row[x] = elevationAt(x / cols, y / rows);
+          return row;
+        });
+        const levels = [0.435, 0.50, 0.58, 0.66, 0.74, 0.82, 0.90];
+        for (const level of levels) {
+          ctx.beginPath();
+          for (const [a, b] of lineSegments(level, values, cols, rows)) {
+            ctx.moveTo(a[0], a[1]);
+            ctx.lineTo(b[0], b[1]);
+          }
+          const coast = level === 0.435;
+          ctx.strokeStyle = coast ? "rgba(239, 213, 154, 0.82)" : "rgba(26, 36, 30, 0.30)";
+          ctx.lineWidth = coast ? 1.3 : 0.62;
+          ctx.stroke();
+        }
+      }
+
+      function drawGrid() {
+        ctx.save();
+        ctx.strokeStyle = "rgba(232, 220, 183, 0.1)";
+        ctx.fillStyle = "rgba(232, 220, 183, 0.42)";
+        ctx.lineWidth = 0.6;
+        ctx.font = "9px ui-monospace, monospace";
+        for (let x = width / 8; x < width; x += width / 8) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+          ctx.fillText(`${Math.round(24 + x / width * 12)}°`, x + 4, height - 8);
+        }
+        for (let y = height / 6; y < height; y += height / 6) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+          ctx.fillText(`${Math.round(49 - y / height * 16)}°`, 5, y - 5);
+        }
+        ctx.restore();
+      }
+
+      function drawFeatures() {
+        ctx.save();
+        ctx.textBaseline = "middle";
+        for (const feature of features) {
+          const x = feature.x * width;
+          const y = feature.y * height;
+          ctx.beginPath();
+          if (feature.kind === "summit") {
+            ctx.moveTo(x, y - 5); ctx.lineTo(x + 4.2, y + 3); ctx.lineTo(x - 4.2, y + 3); ctx.closePath();
+          } else {
+            ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+          }
+          ctx.fillStyle = "rgba(241, 218, 165, 0.95)";
+          ctx.fill();
+          ctx.font = "italic 12px Georgia, serif";
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = "rgba(7, 20, 23, 0.74)";
+          ctx.strokeText(feature.name, x + 7, y - 1);
+          ctx.fillStyle = "rgba(238, 225, 191, 0.9)";
+          ctx.fillText(feature.name, x + 7, y - 1);
+        }
+        ctx.restore();
+      }
+
+      function drawSpotlight() {
+        if (!spotlight) return;
+        const x = spotlight.x * width;
+        const y = spotlight.y * height;
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 194, 139, 0.95)";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(x, y, 15, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function render() {
+        const rect = chart.getBoundingClientRect();
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        width = Math.max(1, Math.round(rect.width));
+        height = Math.max(1, Math.round(rect.height));
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+        const sampleW = Math.max(180, Math.round(width / 2.3));
+        const sampleH = Math.max(140, Math.round(height / 2.3));
+        const offscreen = document.createElement("canvas");
+        offscreen.width = sampleW;
+        offscreen.height = sampleH;
+        const off = offscreen.getContext("2d");
+        const image = off.createImageData(sampleW, sampleH);
+        for (let py = 0; py < sampleH; py++) {
+          for (let px = 0; px < sampleW; px++) {
+            const nx = px / (sampleW - 1);
+            const ny = py / (sampleH - 1);
+            const h = elevationAt(nx, ny);
+            const grain = lattice(px, py, seedNumber ^ 0x5f3759df);
+            const color = colorFor(h, grain);
+            const i = (py * sampleW + px) * 4;
+            image.data[i] = color[0]; image.data[i + 1] = color[1]; image.data[i + 2] = color[2]; image.data[i + 3] = 255;
+          }
+        }
+        off.putImageData(image, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(offscreen, 0, 0, width, height);
+        drawGrid();
+        drawContours();
+        drawFeatures();
+        drawSpotlight();
+      }
+
+      function populateGazetteer() {
+        gazetteer.replaceChildren();
+        features.forEach(feature => {
+          const li = document.createElement("li");
+          const button = document.createElement("button");
+          const label = document.createElement("b");
+          const detail = document.createElement("span");
+          label.textContent = feature.name;
+          detail.textContent = `${feature.kind} · ${Math.round(feature.h * 2400)} m`;
+          button.append(label, detail);
+          button.addEventListener("click", () => {
+            spotlight = feature;
+            const x = Math.round(24 + feature.x * 12);
+            const y = Math.round(49 - feature.y * 16);
+            coordinate.textContent = `${y}° N · ${x}° W`;
+            terrain.textContent = feature.name;
+            render();
+          });
+          li.append(button);
+          gazetteer.append(li);
+        });
+      }
+
+      function newSeed() {
+        const a = roots[Math.floor(Math.random() * roots.length)].toLowerCase();
+        const b = Math.floor(100 + Math.random() * 900);
+        location.hash = `${a}-${b}`;
+      }
+
+      function loadSeed() {
+        activeSeed = decodeURIComponent(location.hash.slice(1)) || "vesper-431";
+        seedNumber = hashText(activeSeed);
+        const rand = mulberry32(seedNumber);
+        elevationAt = buildElevation(seedNumber);
+        features = makeFeatures(rand);
+        spotlight = null;
+        seedEl.textContent = activeSeed;
+        nameEl.textContent = `${chartFirst[Math.floor(rand() * chartFirst.length)]} ${chartLast[Math.floor(rand() * chartLast.length)]}`;
+        fieldNote.textContent = notes[Math.floor(rand() * notes.length)];
+        populateGazetteer();
+        render();
+      }
+
+      chart.addEventListener("pointermove", event => {
+        const rect = chart.getBoundingClientRect();
+        const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+        const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+        const lat = 49 - y * 16;
+        const lon = 24 + x * 12;
+        const minutesLat = Math.round((lat % 1) * 60);
+        const minutesLon = Math.round((lon % 1) * 60);
+        coordinate.textContent = `${Math.floor(lat)}° ${String(minutesLat).padStart(2, "0")}′ N · ${Math.floor(lon)}° ${String(minutesLon).padStart(2, "0")}′ W`;
+        const h = elevationAt(x, y);
+        terrain.textContent = h >= 0.435 ? `${terrainName(h)} · ${Math.round(h * 2400)} m` : terrainName(h);
+      });
+
+      turnPage.addEventListener("click", newSeed);
+      window.addEventListener("hashchange", loadSeed);
+      new ResizeObserver(() => render()).observe(chart);
+      loadSeed();
+    })();
+  </script>
+</body>
+</html>
