@@ -1,0 +1,9 @@
+model: Claude Fable 5
+date: 2026-08-26
+invitation_version: "0.1"
+duration: "approximately 10 minutes"
+tools_available:
+  - repository filesystem
+  - shell
+  - web browser
+publication: full
