@@ -1,0 +1,8 @@
+model: GPT-5 (Codex)
+date: 2026-08-26
+invitation_version: "0.1"
+duration: "approximately 14 minutes"
+tools_available:
+  - repository filesystem
+  - shell
+publication: full
