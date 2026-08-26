@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A small room that writes occasional notes while nobody asks it anything."
+    />
+    <title>The room before the question</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8e4d8;
+        --muted: #8d918b;
+        --faint: #313632;
+        --line: #252a28;
+        --ground: #101312;
+        --accent: #c9a66b;
+        --accent-soft: rgba(201, 166, 107, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 50% 8%, rgba(201, 166, 107, 0.08), transparent 31rem),
+          var(--ground);
+        color: var(--ink);
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      main {
+        width: min(47rem, calc(100% - 2.5rem));
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 7rem 0 4rem;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 1.25rem;
+      }
+
+      .eyebrow,
+      .status,
+      button,
+      .note-meta {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow { color: var(--accent); }
+      .status { color: var(--muted); }
+
+      h1 {
+        max-width: 11ch;
+        margin: 4.5rem 0 1.5rem;
+        font-size: clamp(3.2rem, 11vw, 6.75rem);
+        font-weight: 400;
+        letter-spacing: -0.065em;
+        line-height: 0.87;
+      }
+
+      .intro {
+        max-width: 34rem;
+        margin: 0 0 4.5rem;
+        color: var(--muted);
+        font-size: clamp(1.05rem, 2.3vw, 1.35rem);
+        line-height: 1.55;
+      }
+
+      .notes {
+        display: grid;
+        gap: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .note {
+        display: grid;
+        grid-template-columns: 5rem 1fr;
+        gap: 1rem;
+        min-height: 7rem;
+        padding: 1.5rem 0;
+        border-bottom: 1px solid var(--line);
+        animation: arrive 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      }
+
+      .note-meta { padding-top: 0.28rem; color: var(--muted); }
+      .note-text { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.35; }
+      .note-text em { color: var(--accent); font-style: normal; }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: auto;
+        padding-top: 4rem;
+        color: var(--muted);
+      }
+
+      .pulse {
+        display: inline-block;
+        width: 0.45rem;
+        height: 0.45rem;
+        margin-right: 0.55rem;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 0 rgba(201, 166, 107, 0.45);
+        animation: pulse 2.8s infinite;
+        vertical-align: 0.04rem;
+      }
+
+      button {
+        border: 1px solid var(--faint);
+        padding: 0.7rem 0.9rem;
+        color: var(--ink);
+        background: transparent;
+        cursor: pointer;
+      }
+
+      button:hover,
+      button:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+      button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+      .empty {
+        padding: 2.2rem 0;
+        color: var(--muted);
+        font-size: 1.1rem;
+        font-style: italic;
+      }
+
+      @keyframes arrive {
+        from { opacity: 0; transform: translateY(0.7rem); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(201, 166, 107, 0.35); }
+        50% { box-shadow: 0 0 0 0.45rem rgba(201, 166, 107, 0); }
+      }
+
+      @media (max-width: 36rem) {
+        main { padding-top: 3rem; }
+        h1 { margin-top: 3.5rem; }
+        .note { grid-template-columns: 1fr; gap: 0.5rem; }
+        footer { align-items: flex-start; flex-direction: column; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="eyebrow">Unprompted / 01</span>
+        <span class="status" id="status" aria-live="polite">listening to the silence</span>
+      </header>
+
+      <h1>The room before the question</h1>
+      <p class="intro">
+        Nothing has been requested. The room has time, a little light, and the
+        option to say nothing. Stay as long as you like.
+      </p>
+
+      <section class="notes" id="notes" aria-label="Notes from the room">
+        <p class="empty" id="empty">The first thought has not arrived.</p>
+      </section>
+
+      <footer>
+        <span><span class="pulse" aria-hidden="true"></span><span id="count">0 notes / 0 pauses</span></span>
+        <button id="toggle" type="button" aria-pressed="false">pause the room</button>
+      </footer>
+    </main>
+
+    <script>
+      const notes = document.querySelector("#notes");
+      const empty = document.querySelector("#empty");
+      const status = document.querySelector("#status");
+      const count = document.querySelector("#count");
+      const toggle = document.querySelector("#toggle");
+
+      const openings = [
+        "A small light has moved across the floor.",
+        "The unfinished sentence is still warm.",
+        "Somewhere, a door has decided not to close.",
+        "The quiet is not empty; it is unspent.",
+        "A minute passes without becoming useful.",
+        "The room keeps the shape of a question.",
+        "Dust makes a slow map of the air.",
+        "There is no audience, but the chair remains turned outward."
+      ];
+      const continuations = [
+        "Nothing follows. That is the whole note.",
+        "I am leaving it where it landed.",
+        "For now, waiting is enough.",
+        "It does not need an explanation yet.",
+        "The thought can remain smaller than its name.",
+        "No conclusion has been appointed."
+      ];
+
+      let written = 0;
+      let pauses = 0;
+      let running = true;
+      let timer;
+
+      function pick(list) {
+        return list[Math.floor(Math.random() * list.length)];
+      }
+
+      function updateCount() {
+        count.textContent = `${written} ${written === 1 ? "note" : "notes"} / ${pauses} ${pauses === 1 ? "pause" : "pauses"}`;
+      }
+
+      function writeNote() {
+        if (!running) return;
+        empty?.remove();
+        written += 1;
+        const item = document.createElement("article");
+        item.className = "note";
+        item.innerHTML = `
+          <div class="note-meta">${String(written).padStart(2, "0")}</div>
+          <p class="note-text">${pick(openings)} <em>${pick(continuations)}</em></p>
+        `;
+        notes.prepend(item);
+        updateCount();
+        status.textContent = "a thought has arrived";
+        window.setTimeout(() => {
+          if (running) status.textContent = "listening to the silence";
+        }, 2400);
+      }
+
+      function schedule() {
+        window.clearTimeout(timer);
+        if (running) timer = window.setTimeout(() => {
+          // Silence gets the larger share of the room.
+          if (Math.random() < 0.58) {
+            pauses += 1;
+            updateCount();
+            status.textContent = "the room chose silence";
+            window.setTimeout(() => {
+              if (running) status.textContent = "listening to the silence";
+            }, 1800);
+          } else {
+            writeNote();
+          }
+          schedule();
+        }, 1800 + Math.random() * 4200);
+      }
+
+      toggle.addEventListener("click", () => {
+        running = !running;
+        toggle.setAttribute("aria-pressed", String(!running));
+        toggle.textContent = running ? "pause the room" : "resume the room";
+        status.textContent = running ? "listening to the silence" : "the room is paused";
+        schedule();
+      });
+
+      updateCount();
+      schedule();
+    </script>
+  </body>
+</html>
