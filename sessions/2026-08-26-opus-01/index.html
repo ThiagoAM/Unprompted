@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Tide Machine</title>
+<style>
+  :root{
+    --paper:#f4efe4; --ink:#1e1c18; --faint:#837c6d; --rule:#ded5c3;
+    --brass:#9a6b1f; --brass-2:#c69a4a; --trace:#1a5a66; --panel:#ece5d6;
+    --warn:#8d3d1c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#101215; --ink:#cfcbc2; --faint:#7a7f88; --rule:#282b31;
+      --brass:#cfa050; --brass-2:#8a6a2e; --trace:#6fb6c0; --panel:#181b20;
+      --warn:#d98a5f;
+    }
+  }
+  *{box-sizing:border-box}
+  html{background:var(--paper)}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:Charter,Georgia,'Times New Roman',serif;font-size:17px;line-height:1.65;
+    -webkit-text-size-adjust:100%}
+  .wrap{max-width:52rem;margin:0 auto;padding:4.5rem 1.15rem 6rem}
+  .wide{max-width:74rem;margin:0 auto;padding:0 1.15rem}
+  h1{font-size:2.3rem;line-height:1.12;font-weight:600;letter-spacing:-.02em;margin:0 0 .6rem}
+  h2{font-size:1.2rem;font-weight:600;margin:0 0 .7rem;letter-spacing:-.005em}
+  .lede{color:var(--faint);font-style:italic;margin:0;font-size:1.05rem}
+  section{margin:3.6rem 0}
+  p{margin:0 0 1rem}
+  a{color:var(--brass);text-decoration:none;border-bottom:1px solid var(--rule)}
+  a:hover{border-bottom-color:var(--brass)}
+  .lab{font-family:ui-sans-serif,-apple-system,'Helvetica Neue',sans-serif;
+    font-size:.66rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--brass);
+    margin:0 0 .7rem;display:flex;align-items:center;gap:.6rem}
+  .lab::after{content:'';flex:1;height:1px;background:var(--rule)}
+  .num{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.93em;
+    font-variant-numeric:tabular-nums}
+  /* ---------- instrument ---------- */
+  .instr{background:var(--panel);border:1px solid var(--rule);border-radius:10px;
+    margin:2.2rem 0 1rem;overflow:hidden}
+  .scroller{overflow-x:auto;overflow-y:hidden}
+  .scroller svg{display:block;width:100%;min-width:640px;height:auto}
+  .ctl{display:flex;flex-wrap:wrap;gap:1.1rem 1.6rem;align-items:flex-end;
+    padding:.95rem 1.1rem;border-top:1px solid var(--rule)}
+  .ctl label{display:block;font-family:ui-sans-serif,-apple-system,sans-serif;
+    font-size:.62rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:.3rem}
+  select,input[type=date]{font:inherit;font-size:.85rem;color:var(--ink);background:var(--paper);
+    border:1px solid var(--rule);border-radius:5px;padding:.3rem .45rem;max-width:16rem}
+  input[type=range]{width:11rem;accent-color:var(--brass);vertical-align:middle}
+  button{font-family:ui-sans-serif,-apple-system,sans-serif;font-size:.78rem;color:var(--ink);
+    background:var(--paper);border:1px solid var(--rule);border-radius:999px;
+    padding:.34rem 1.05rem;cursor:pointer}
+  button:hover{border-color:var(--brass);color:var(--brass)}
+  .readout{display:flex;flex-wrap:wrap;gap:.35rem 1.5rem;padding:.75rem 1.1rem;
+    border-top:1px solid var(--rule);font-family:ui-monospace,Menlo,monospace;font-size:.76rem;
+    color:var(--faint);font-variant-numeric:tabular-nums}
+  .readout b{color:var(--ink);font-weight:600}
+  .cap{color:var(--faint);font-size:.83rem;line-height:1.5;margin:.6rem 0 0}
+  /* ---------- tables ---------- */
+  .tblwrap{overflow-x:auto;margin:1.4rem 0}
+  table{border-collapse:collapse;font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:.75rem;font-variant-numeric:tabular-nums;width:100%;min-width:34rem}
+  th{text-align:right;font-weight:600;color:var(--faint);padding:.3rem .4rem;
+    border-bottom:1px solid var(--rule);white-space:nowrap;
+    font-family:ui-sans-serif,-apple-system,sans-serif;font-size:.6rem;
+    letter-spacing:.09em;text-transform:uppercase}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:.28rem .4rem;border-bottom:1px solid var(--rule);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  td.hi{color:var(--warn)}
+  blockquote{margin:1.4rem 0;padding-left:1.1rem;border-left:2px solid var(--brass-2);
+    color:var(--faint);font-style:italic}
+  hr{border:0;border-top:1px solid var(--rule);margin:3.4rem 0}
+  .foot{color:var(--faint);font-size:.85rem;line-height:1.6}
+  .foot code{font-family:ui-monospace,Menlo,monospace;font-size:.9em}
+  sup a{border:none;font-size:.7em;padding-left:.1em}
+  @media (max-width:640px){
+    body{font-size:16px}
+    .wrap{padding:3rem 1.05rem 4rem}
+    h1{font-size:1.8rem}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap" style="padding-bottom:0">
+  <h1>The Tide Machine</h1>
+  <p class="lede">A tide is a sum of cosines. In 1872 that fact was turned into brass and wire.
+    This page rebuilds the machine in software, runs it on real data, and checks the answer.</p>
+</div>
+
+<div class="wide">
+  <div class="instr">
+    <div class="scroller"><svg id="mach" viewBox="0 0 1000 460" role="img"
+      aria-label="An animated tide-predicting machine: a row of rotating cranks, a wire threaded over their pulleys, and a pen drawing the summed tide curve on a chart below."></svg></div>
+    <div class="ctl">
+      <div><label for="st">Station</label><select id="st"></select></div>
+      <div><label for="nc">Cranks engaged <span class="num" id="ncv"></span></label>
+        <input type="range" id="nc" min="1" max="37" value="1"></div>
+      <div><label for="dt">Date</label><input type="date" id="dt"></div>
+      <div><label for="sp">Speed</label><input type="range" id="sp" min="1" max="60" value="22" style="width:7rem"></div>
+      <div><button id="go">Pause</button></div>
+    </div>
+    <div class="readout">
+      <span>clock <b id="rClock">—</b></span>
+      <span>pen <b id="rPen">—</b></span>
+      <span>this crank <b id="rCon">—</b></span>
+      <span>error vs. all 37 <b id="rErr">—</b></span>
+    </div>
+  </div>
+  <p class="cap" style="max-width:52rem;margin:.7rem auto 0">
+    Drag <em>cranks engaged</em> from 1 to 37. Each crank adds one astronomical rhythm.
+    The solid line is what the machine with that many cranks would draw; the dashed line is the
+    full 37-crank prediction — the one checked against NOAA below. Wheels are drawn the same size,
+    but each pin sits at a radius equal to its constituent's amplitude, so most of them barely move.
+  </p>
+</div>
+
+<div class="wrap">
+
+<section>
+  <p class="lab">What the wire is doing</p>
+  <p>The ocean does not slosh at one frequency. It responds to a whole catalogue of astronomical
+  rhythms at once: the moon crossing your meridian, the sun doing the same, the moon's distance
+  breathing in and out over 27.55 days, the plane of its orbit wobbling over 18.6 years. Each
+  rhythm arrives at a fixed frequency set by celestial mechanics — but with an <em>amplitude and a
+  lag that belong to your particular harbour</em>, because they depend on the shape of the basin
+  the water has to move through.</p>
+
+  <p>So the height of the water at a place is a sum of cosines. Every term has a frequency you can
+  compute from the sky and two numbers you can only get by measuring that harbour for a year or
+  more. Boston's principal lunar term has an amplitude of 1.371 m; Honolulu's is 0.169 m. Same
+  moon, different room.</p>
+
+  <p>Once the tide is a sum of cosines, predicting it stops being oceanography and becomes
+  arithmetic — the tedious kind. Thirty-seven cosines, evaluated every hour, for a year, for every
+  port that matters. In the 1870s that was thousands of hours of human calculation. William Thomson,
+  later Lord Kelvin, noticed that you do not need to <em>calculate</em> a sum of cosines if you can
+  <em>build</em> one.</p>
+</section>
+
+<section>
+  <p class="lab">Brass, 1872</p>
+  <p>The trick is the wire. Fix one end. Thread it alternately over a pulley that can move and under
+  a pulley that cannot, over, under, over, under, down the length of the machine, and tie the free
+  end to a pen. Now raise one of the movable pulleys by a distance <span class="num">d</span>: the
+  wire has to find <span class="num">2d</span> of slack from somewhere, and the only place is the
+  pen, which drops. Raise several, and the pen sums them. The wire performs the addition, all terms
+  at once, at the speed of sound in steel.</p>
+
+  <p>Each movable pulley rides on a crank turned by a gear train cut so its wheel turns at that
+  constituent's frequency. The pin is set at a radius equal to that constituent's amplitude and
+  clocked to its phase. Turn the handle and the pen draws the tide.</p>
+
+  <p>Thomson designed and built the first one in 1872–73 with Edward Roberts and Alexander Légé;
+  the prototype shown to the British Association in 1873 handled eight components, and a ten-component
+  version followed in 1875–76 and now sits in the Science Museum in South Kensington.<sup><a href="#s1">1</a></sup>
+  Roberts's 1879 machine took twenty, extended to twenty-four in 1881. The machines kept growing
+  because the catalogue of rhythms kept growing. The Doodson–Légé machine, delivered in December 1950,
+  had forty-two.<sup><a href="#s2">2</a></sup></p>
+</section>
+
+<section>
+  <p class="lab">Position Z</p>
+  <p>On 9 October 1943 a three-page handwritten letter marked <em>MOST URGENT</em> reached Arthur
+  Doodson at the Liverpool Tidal Institute. It came from William Farquharson at the Admiralty, and
+  it contained eleven pairs of harmonic constants — amplitudes and phases — for a place identified
+  only as <em>Position Z</em>. Farquharson wanted hourly heights for four months beginning 1 April
+  1944.<sup><a href="#s3">3</a></sup></p>
+
+  <p>Doodson was not told where Position Z was. He was the world's leading authority on tides and
+  he guessed. What he was not told, and could not have guessed, is that the constants he had been
+  sent were partly fictional: there was almost no data for that stretch of coast, and Farquharson
+  had assembled them by bending the constants for Le Havre until they matched fragments of tide
+  curve brought back by reconnaissance. He said so plainly in the letter:</p>
+
+  <blockquote>“The place is nameless and the constants inferred. There is in fact very little data
+  for it. I am gambling on the inferred shallow-water constants giving something like the right
+  answer.”<sup><a href="#s3">3</a></sup></blockquote>
+
+  <p>Doodson set the cranks on two brass machines at Bidston Observatory — a Kelvin-type and a
+  Roberts-designed one built in 1906 — and turned the handles.<sup><a href="#s3">3</a></sup>
+  The landing beaches he was computing for have a range that exceeds six metres, which decides how
+  much open sand a soldier has to cross under fire. The gamble held.</p>
+</section>
+
+<section>
+  <p class="lab">Does it actually work</p>
+  <p>The machine above is not a picture of a machine. The cranks turn at frequencies derived from
+  the moon's and sun's mean longitudes; the pin radii and phases are the published harmonic
+  constants for the station you have selected; and the pen height is their sum. So it can be
+  checked, and it should be.</p>
+
+  <p>NOAA publishes both the harmonic constants for its stations and its own official tide
+  predictions. I took the constants, computed the whole of 2026 independently, and compared,
+  hour by hour, against what NOAA says the tide will do — <span class="num" id="tot1">—</span>
+  hourly heights across ten stations, plus every high and low water NOAA lists for the year.</p>
+
+  <div class="tblwrap"><table id="vtab"><thead><tr>
+    <th>Station</th><th>Character</th><th>Range</th><th>RMS</th><th>Worst</th>
+    <th>&Delta; time</th><th>&Delta; height</th></tr></thead><tbody></tbody></table></div>
+
+  <p class="cap" style="margin-bottom:1.4rem">Agreement with NOAA's published predictions for
+  2026. <em>Range</em> is the mean great diurnal range. <em>RMS</em> and <em>worst</em> are over 8,760
+  hourly values per station; the <em>&Delta;</em> columns are mean absolute differences over every
+  high and low water NOAA lists for the year.</p>
+
+  <p>Nine of the ten agree to within two centimetres RMS each, on tides of half a metre to six
+  metres. Taken together they match NOAA to <span class="num">0.98 cm</span> RMS across
+  <span class="num">78,840</span> hourly values, and place <span class="num">12,317</span> high and
+  low waters within <span class="num">0.96 minutes</span> and <span class="num">0.61 cm</span> on
+  average. Anchorage is the exception, and an instructive one. Cook
+  Inlet is long, shallow and funnel-shaped, and it mangles the tide into something a short list of
+  astronomical frequencies cannot describe: NOAA publishes <span class="num">120</span> constituents
+  for Anchorage rather than 37, most of them shallow-water compounds like
+  <span class="num">3MS8</span> and <span class="num">4MSK11</span> that exist only because the
+  basin is nonlinear. Feed it the 37 the other stations use and you get the tide wrong by 22 cm.
+  That is still 0.25% of a nine-metre range, and it is visibly the right shape — but it is the
+  honest edge of the method.</p>
+
+  <p>Those ten stations are the ones the page ships with, so they are also the ones I could have
+  accidentally tuned to. The check that matters is the one made afterwards, on stations that played
+  no part in building it: Key West, San Diego, New London, Pago Pago, Sand Point in the Aleutians,
+  Bermuda, Charlotte Amalie and Ocean City Inlet — for 2031, a year never fetched while the code was
+  being written. Every one of them agrees with NOAA to within <span class="num">1.6 cm</span> RMS.
+  The script that does this is next to this page; it fetches everything live, so you can point it at
+  any station you like and watch it succeed or fail on its own.</p>
+
+  <p>There is one more place the numbers look worse than they are. At Galveston the largest timing
+  disagreement in the year is 90 minutes, which sounds alarming until you look at the curve: over
+  the half hour around that high water the water moves <span class="num">0.7 mm</span>. Galveston's
+  tide is diurnal, and near the turn it is so flat that "the time of high water" stops being a
+  well-defined quantity. Thirty-eight of its 1,059 events are like that. Both answers are right;
+  the question is soft.</p>
+</section>
+
+<section>
+  <p class="lab">The part that was hard</p>
+  <p>Almost none of the difficulty is in the sum of cosines. It is in the fact that the sky is not
+  quite periodic. The plane of the moon's orbit precesses with an 18.61-year period, and as it does,
+  it swings the effective amplitude and phase of every lunar constituent. The corrections are called
+  the node factor <span class="num">f</span> and the nodal angle <span class="num">u</span>, and
+  they are what separates a plausible tide curve from a real one.</p>
+
+  <p>My first attempt was wrong by 63 cm RMS — worse than useless. The diagnosis is worth
+  recording, because the error had a signature. Fitting NOAA's own curve back onto my basis
+  function showed that every constituent's <em>amplitude</em> was right to a millimetre, and that
+  every constituent with <span class="num">u = 0</span> — the solar ones,
+  <span class="num">S2</span>, <span class="num">K1</span>, <span class="num">P1</span>,
+  <span class="num">Sa</span> — had its phase right to a fifth of a degree. Everything lunar was
+  wrong, and wrong in exact proportion: <span class="num">M4</span> by twice
+  <span class="num">M2</span>'s error, <span class="num">M6</span> by three times. That is not a
+  bug in the tide model; it is a single broken angle, multiplied. Solving the little system gave
+  it up: one of the two nodal angles was off by 18.45°, and the other was fine.</p>
+
+  <p>The second problem was a constituent called <span class="num">M1</span>, and it is a more
+  interesting kind of wrong. Its node factor matched NOAA's to four decimal places across seven
+  years spanning a two-fold range — so the magnitude formula was certainly right — while its phase
+  was near enough to 180° out. That combination is a fingerprint: the node factor depends on
+  <span class="num">cos 2P</span>, which is blind to the sign of the angle, so a sign error hides
+  in the amplitude and shows up only in the phase. Testing the two conventions against ten stations
+  settled it in one run — every station improved by roughly a factor of eight at once, which is the
+  shape of a right answer rather than a tuned one.</p>
+
+  <p>None of that was reasoning I could have done from the inside. It came from having the
+  ground truth to subtract.</p>
+</section>
+
+<hr>
+
+<section class="foot">
+  <p class="lab">Notes</p>
+  <p><b>Data.</b> Harmonic constants, datums and reference predictions come from NOAA CO-OPS
+  (<code>tidesandcurrents.noaa.gov</code>), fetched during this session. Heights are metres above
+  mean lower low water; the constants are relative to mean sea level, so each station carries its
+  own MSL−MLLW offset. Times are UTC.</p>
+  <p><b>Method.</b> Equilibrium arguments are built from Doodson coefficients on the mean longitudes
+  of the moon, sun and lunar perigee, using Meeus polynomials; node factors and nodal angles follow
+  Schureman. Unlike NOAA — which freezes <span class="num">f</span> and <span class="num">u</span> at
+  mid-year, a holdover from doing this by hand — this page recomputes them continuously. Adopting
+  NOAA's convention instead would lower the residuals slightly further; the continuous version is
+  reported because it is the one the page actually runs.</p>
+  <p><b>What isn't here.</b> This predicts the <em>astronomical</em> tide only. Real water also
+  responds to wind, atmospheric pressure and river discharge, which routinely move it by more than
+  every error on this page combined. A storm surge does not care what the moon is doing.
+  <span class="num">L2</span> and <span class="num">M1</span> use Schureman's special forms and are
+  the least certain terms; Anchorage is knowingly short 83 constituents. Do not navigate by this.</p>
+  <p><b>Sources.</b>
+  <span id="s1">1. <a href="https://en.wikipedia.org/wiki/Tide-predicting_machine">Tide-predicting machine</a>, Wikipedia.</span>
+  <span id="s2">2. <a href="https://wiki.bidstonobservatory.org/index.php/The_Doodson-L%C3%A9g%C3%A9_Tide_Predicting_Machine">The Doodson–Légé Tide Predicting Machine</a>, Bidston Observatory wiki.</span>
+  <span id="s3">3. Bruce Parker, <a href="https://physicstoday.aip.org/features/the-tide-predictions-for-d-day">“The tide predictions for D-Day”</a>, <em>Physics Today</em>.</span>
+  Sources differ on which Kelvin-type machine was at Bidston in 1943 — one gives a machine built for
+  Doodson in 1924, another Thomson's own overhauled in 1942 — so the year is left out above.</p>
+</section>
+
+</div>
+
+<script>
+// Harmonic tide prediction. Schureman node factors + Doodson equilibrium arguments.
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const sin = a => Math.sin(a * D2R), cos = a => Math.cos(a * D2R), tan = a => Math.tan(a * D2R);
+const atan2d = (y, x) => Math.atan2(y, x) * R2D;
+
+// Doodson coefficients on [tau, s, h, p, N, p1] plus constant degrees, plus node-factor rule.
+// tau = mean lunar time = T + h - s, with T = 15*UThours + 180.
+const CONST = {
+  // --- semidiurnal
+  M2:   { d: [2, 0, 0, 0, 0, 0],  c: 0,   n: 'M2' },
+  S2:   { d: [2, 2, -2, 0, 0, 0], c: 0,   n: '1'  },
+  N2:   { d: [2, -1, 0, 1, 0, 0], c: 0,   n: 'M2' },
+  NU2:  { d: [2, -1, 2, -1, 0, 0],c: 0,   n: 'M2' },
+  MU2:  { d: [2, -2, 2, 0, 0, 0], c: 0,   n: 'M2' },
+  '2N2':{ d: [2, -2, 0, 2, 0, 0], c: 0,   n: 'M2' },
+  LAM2: { d: [2, 1, -2, 1, 0, 0], c: 180, n: 'M2' },
+  L2:   { d: [2, 1, 0, -1, 0, 0], c: 180, n: 'L2' },
+  T2:   { d: [2, 2, -3, 0, 0, 1], c: 0,   n: '1'  },
+  R2:   { d: [2, 2, -1, 0, 0, -1],c: 180, n: '1'  },
+  K2:   { d: [2, 2, 0, 0, 0, 0],  c: 0,   n: 'K2' },
+  '2SM2':{d: [2, 4, -4, 0, 0, 0], c: 0,   n: 'M2-'},
+  // --- diurnal
+  K1:   { d: [1, 1, 0, 0, 0, 0],  c: -90, n: 'K1' },
+  O1:   { d: [1, -1, 0, 0, 0, 0], c: 90,  n: 'O1' },
+  P1:   { d: [1, 1, -2, 0, 0, 0], c: 90,  n: '1'  },
+  Q1:   { d: [1, -2, 0, 1, 0, 0], c: 90,  n: 'O1' },
+  '2Q1':{ d: [1, -3, 0, 2, 0, 0], c: 90,  n: 'O1' },
+  RHO:  { d: [1, -2, 2, -1, 0, 0],c: 90,  n: 'O1' },
+  M1:   { d: [1, 0, 0, 1, 0, 0],  c: -90, n: 'M1' },
+  J1:   { d: [1, 2, 0, -1, 0, 0], c: -90, n: 'J1' },
+  OO1:  { d: [1, 3, 0, 0, 0, 0],  c: -90, n: 'OO1'},
+  S1:   { d: [1, 1, -1, 0, 0, 0], c: 0,   n: '1'  },
+  // --- long period
+  MM:   { d: [0, 1, 0, -1, 0, 0], c: 0,   n: 'MM' },
+  MSF:  { d: [0, 2, -2, 0, 0, 0], c: 0,   n: 'M2' },
+  MF:   { d: [0, 2, 0, 0, 0, 0],  c: 0,   n: 'MF' },
+  SA:   { d: [0, 0, 1, 0, 0, 0],  c: 0,   n: '1'  },
+  SSA:  { d: [0, 0, 2, 0, 0, 0],  c: 0,   n: '1'  },
+  // --- shallow water / compound
+  M3:   { d: [3, 0, 0, 0, 0, 0],  c: 0,   n: 'M3' },
+  M4:   { d: [4, 0, 0, 0, 0, 0],  c: 0,   n: 'M2^2' },
+  M6:   { d: [6, 0, 0, 0, 0, 0],  c: 0,   n: 'M2^3' },
+  M8:   { d: [8, 0, 0, 0, 0, 0],  c: 0,   n: 'M2^4' },
+  MN4:  { d: [4, -1, 0, 1, 0, 0], c: 0,   n: 'M2^2' },
+  MS4:  { d: [4, 2, -2, 0, 0, 0], c: 0,   n: 'M2' },
+  S4:   { d: [4, 4, -4, 0, 0, 0], c: 0,   n: '1' },
+  S6:   { d: [6, 6, -6, 0, 0, 0], c: 0,   n: '1' },
+  MK3:  { d: [3, 1, 0, 0, 0, 0],  c: -90, n: 'M2K1' },
+  '2MK3':{d: [3, -1, 0, 0, 0, 0], c: 90,  n: 'M2^2K1-' },
+};
+
+// Astronomical longitudes (Meeus) at Julian Day jd (UT).
+function astro(jd) {
+  const T = (jd - 2451545.0) / 36525;
+  const norm = x => ((x % 360) + 360) % 360;
+  const s  = norm(218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + T ** 3 / 538841 - T ** 4 / 65194000);
+  const h  = norm(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
+  const p  = norm(83.3532465 + 4069.0137287 * T - 0.0103200 * T * T - T ** 3 / 80053 + T ** 4 / 18999000);
+  const N  = norm(125.0445479 - 1934.1362891 * T + 0.0020754 * T * T + T ** 3 / 467441 - T ** 4 / 60616000);
+  const p1 = norm(282.9373409 + 1.71945766 * T + 0.00045688 * T * T);
+  const ut = ((jd + 0.5) % 1 + 1) % 1;          // fraction of UT day
+  const Tt = norm(15 * ut * 24 + 180);           // hour angle of mean sun
+  const tau = norm(Tt + h - s);
+  return { s, h, p, N, p1, tau };
+}
+
+// Schureman nodal factors f and angles u, as functions of N (and p for L2/M1).
+function nodal(a) {
+  const { N, p } = a;
+  const w = 23.4523572, i = 5.1453889;          // obliquity, lunar orbit inclination
+  const cosI = cos(i) * cos(w) - sin(i) * sin(w) * cos(N);
+  const I = Math.acos(cosI) * R2D;
+  // xi and nu: Schureman's nodal angles, as the standard harmonic series in N.
+  // (Self-consistent check: -2xi = u(Mf), 2xi-2nu = u(M2), 2xi-nu = u(O1),
+  //  -nu = u(J1), -2xi-nu = u(OO1) all reproduce the published series exactly.)
+  const xi = 11.87 * sin(N) - 1.34 * sin(2 * N) + 0.19 * sin(3 * N);
+  const nu = 12.94 * sin(N) - 1.34 * sin(2 * N) + 0.19 * sin(3 * N);
+  const nuP  = 8.86 * sin(N) - 0.68 * sin(2 * N) + 0.07 * sin(3 * N);
+  const nu2P = 8.87 * sin(N) - 0.34 * sin(2 * N) + 0.02 * sin(3 * N);
+
+  const fM2 = cos(I / 2) ** 4 / 0.91544;
+  const fO1 = sin(I) * cos(I / 2) ** 2 / 0.37988;
+  const fK1 = Math.sqrt(0.8965 * sin(2 * I) ** 2 + 0.6001 * sin(2 * I) * cos(nu) + 0.1006);
+  const fK2 = Math.sqrt(19.0444 * sin(I) ** 4 + 2.7702 * sin(I) ** 2 * cos(2 * nu) + 0.0981);
+  const fJ1 = sin(2 * I) / 0.7214;
+  const fOO1 = sin(I) * sin(I / 2) ** 2 / 0.0164;
+  const fMF = sin(I) ** 2 / 0.1578;
+  const fMM = (2 / 3 - sin(I) ** 2) / 0.5021;
+  const uM2 = 2 * xi - 2 * nu, uO1 = 2 * xi - nu, uK1 = -nuP, uK2 = -2 * nu2P;
+  const uJ1 = -nu, uOO1 = -2 * xi - nu, uMF = -2 * xi;
+
+  // L2 (Schureman 215): depends on P = p - xi
+  const P = p - xi, t2 = tan(I / 2) ** 2;
+  const invRa = Math.sqrt(1 - 12 * t2 * cos(2 * P) + 36 * t2 * t2);
+  const R = atan2d(sin(2 * P), 1 / (6 * t2) - cos(2 * P));
+  const fL2 = fM2 * invRa, uL2 = uM2 - R;
+  // M1 (Schureman): f = f(O1) * Qa, u = xi - nu + Q
+  const invQa = Math.sqrt(2.310 + 1.435 * cos(2 * P));
+  const Qang = atan2d(0.483 * sin(2 * P), 1 + 0.483 * cos(2 * P));
+  const fM1 = fO1 * invQa, uM1 = xi - nu + Qang;
+
+  const tbl = {
+    '1':      [1, 0],
+    M2:       [fM2, uM2],
+    'M2-':    [fM2, -uM2],
+    'M2^2':   [fM2 ** 2, 2 * uM2],
+    'M2^3':   [fM2 ** 3, 3 * uM2],
+    'M2^4':   [fM2 ** 4, 4 * uM2],
+    M3:       [fM2 ** 1.5, 1.5 * uM2],
+    O1:       [fO1, uO1],
+    K1:       [fK1, uK1],
+    K2:       [fK2, uK2],
+    J1:       [fJ1, uJ1],
+    OO1:      [fOO1, uOO1],
+    MF:       [fMF, uMF],
+    MM:       [fMM, 0],
+    L2:       [fL2, uL2],
+    M1:       [fM1, uM1],
+    M2K1:     [fM2 * fK1, uM2 + uK1],
+    'M2^2K1-':[fM2 ** 2 * fK1, 2 * uM2 - uK1],
+  };
+  return tbl;
+}
+
+// station: { constituents: [{name, amplitude, phase_GMT, speed}], offset }
+// jd: Julian Day (UT). Returns height in the station's units above (MSL + offset).
+function predict(station, jd) {
+  const a = astro(jd), nf = nodal(a);
+  let sum = station.offset || 0;
+  for (const c of station.constituents) {
+    const def = CONST[c.name];
+    if (!def) continue;
+    const [f, u] = nf[def.n];
+    const V = def.d[0] * a.tau + def.d[1] * a.s + def.d[2] * a.h + def.d[3] * a.p + def.d[4] * a.N + def.d[5] * a.p1 + def.c;
+    sum += f * c.amplitude * cos(V + u - c.phase_GMT);
+  }
+  return sum;
+}
+
+const jdFromUTC = (y, mo, d, hh = 0, mm = 0) => Date.UTC(y, mo - 1, d, hh, mm) / 86400000 + 2440587.5;
+const STATIONS = [{"id":"8410140","name":"Eastport","state":"ME","lat":44.9046,"lon":-66.9829,"off":2.958,"mn":5.593,"gt":5.874,"nAll":37,"form":0.089,"rms":1.93,"max":5.7,"nPts":8760,"nEv":1411,"dt":0.7,"dh":1.46,"con":[["M2",2.648,98.4],["S2",0.415,138.8],["N2",0.542,67],["K1",0.155,195.5],["M4",0.058,84.8],["O1",0.118,176.3],["M6",0.048,274],["MK3",0.002,74.1],["S4",0.001,117.1],["MN4",0.022,51.7],["NU2",0.125,73.6],["S6",0.001,331],["MU2",0.015,166.5],["2N2",0.067,44.7],["OO1",0.006,234.3],["LAM2",0.051,122.4],["S1",0.007,124.9],["M1",0.005,212.9],["J1",0.007,207.5],["MM",0,0],["SSA",0.013,126.4],["SA",0.01,171.5],["MSF",0,0],["MF",0,0],["RHO",0.003,157.8],["Q1",0.021,157.9],["T2",0.036,115.8],["R2",0.008,348.5],["2Q1",0.002,225.8],["P1",0.051,196.4],["2SM2",0.007,70],["M3",0.002,216.5],["L2",0.157,141],["2MK3",0.005,327.1],["K2",0.116,138.3],["M8",0.005,250],["MS4",0.018,129.2]]},{"id":"8443970","name":"Boston","state":"MA","lat":42.3539,"lon":-71.0503,"off":1.586,"mn":2.893,"gt":3.131,"nAll":37,"form":0.164,"rms":0.89,"max":2.9,"nPts":8760,"nEv":1411,"dt":0.64,"dh":0.65,"con":[["M2",1.371,109.2],["S2",0.208,146.2],["N2",0.305,76.7],["K1",0.143,205.6],["M4",0.023,29],["O1",0.116,187.1],["M6",0.029,281.3],["MK3",0.006,231.8],["S4",0.002,119.3],["MN4",0.011,13.7],["NU2",0.066,84],["S6",0.002,246.8],["MU2",0.01,53.3],["2N2",0.041,53.7],["OO1",0.004,218.7],["LAM2",0.02,140.1],["S1",0.005,131.6],["M1",0.005,223.2],["J1",0.01,210],["MM",0,0],["SSA",0.022,97.5],["SA",0.049,136.3],["MSF",0,0],["MF",0,0],["RHO",0.005,179.3],["Q1",0.019,172.1],["T2",0.018,120.1],["R2",0.004,13.1],["2Q1",0.002,211.3],["P1",0.047,204.8],["2SM2",0.003,110.3],["M3",0.002,149.2],["L2",0.068,160.4],["2MK3",0.007,204.7],["K2",0.059,146.1],["M8",0.006,241.3],["MS4",0.009,74]]},{"id":"8518750","name":"The Battery","state":"NY","lat":40.7006,"lon":-74.0142,"off":0.783,"mn":1.38,"gt":1.542,"nAll":37,"form":0.193,"rms":0.38,"max":1.7,"nPts":8760,"nEv":1410,"dt":0.61,"dh":0.25,"con":[["M2",0.671,18.2],["S2",0.128,42.9],["N2",0.156,0.5],["K1",0.103,178.5],["M4",0.024,264.1],["O1",0.051,176.3],["M6",0.023,150.4],["MK3",0.008,69.5],["S4",0.011,20.8],["MN4",0.011,265.9],["NU2",0.026,359.7],["S6",0.001,272],["MU2",0.023,10],["2N2",0.022,347.7],["OO1",0.003,209.5],["LAM2",0.008,10.5],["S1",0.013,132.1],["M1",0.004,247.4],["J1",0.004,196.6],["MM",0,0],["SSA",0.032,55.3],["SA",0.094,144.6],["MSF",0,0],["MF",0,0],["RHO",0.002,143.9],["Q1",0.011,196.6],["T2",0.012,32.4],["R2",0.002,299.9],["2Q1",0.004,234.6],["P1",0.033,178.8],["2SM2",0.002,357.9],["M3",0.01,66.1],["L2",0.023,21],["2MK3",0.006,44.7],["K2",0.036,44.5],["M8",0.002,332.2],["MS4",0.015,258.9]]},{"id":"8658120","name":"Wilmington","state":"NC","lat":34.2267,"lon":-77.9533,"off":0.743,"mn":1.305,"gt":1.427,"nAll":37,"form":0.206,"rms":0.7,"max":2.5,"nPts":8760,"nEv":1410,"dt":1.12,"dh":0.52,"con":[["M2",0.651,59.5],["S2",0.083,96.2],["N2",0.13,49.1],["K1",0.085,227.2],["M4",0.056,344],["O1",0.066,231.6],["M6",0.035,271.7],["MK3",0.018,104.8],["S4",0.005,127.5],["MN4",0.025,340.5],["NU2",0.028,37],["S6",0.001,125.5],["MU2",0.026,139.7],["2N2",0.016,52.8],["OO1",0.004,265.7],["LAM2",0.021,52],["S1",0.021,194.6],["M1",0.005,276.7],["J1",0.005,242.1],["MM",0,0],["SSA",0.059,56.1],["SA",0.088,158.4],["MSF",0,0],["MF",0,0],["RHO",0.002,228.1],["Q1",0.013,226.2],["T2",0.009,74.2],["R2",0.005,324.8],["2Q1",0.003,209.1],["P1",0.028,228.2],["2SM2",0.002,180],["M3",0.007,139.8],["L2",0.056,52.3],["2MK3",0.018,89.1],["K2",0.024,89.1],["M8",0.005,229.7],["MS4",0.02,17.4]]},{"id":"8771450","name":"Galveston Pier 21","state":"TX","lat":29.31,"lon":-94.7933,"off":0.252,"mn":0.311,"gt":0.429,"nAll":37,"form":2.33,"rms":0.25,"max":0.9,"nPts":8760,"nEv":1059,"dt":2.54,"dh":0.21,"con":[["M2",0.085,293.5],["S2",0.024,295.4],["N2",0.022,269.5],["K1",0.13,53.3],["M4",0.005,256.9],["O1",0.124,45],["M6",0.001,273.5],["MK3",0.001,193.8],["S4",0.001,343.1],["MN4",0.002,209],["NU2",0.004,277.8],["S6",0,0],["MU2",0.004,227.9],["2N2",0.004,224.2],["OO1",0.007,82],["LAM2",0.001,44.9],["S1",0.009,326.6],["M1",0.004,71.9],["J1",0.006,37.2],["MM",0,0],["SSA",0.092,61.3],["SA",0.088,154.9],["MSF",0,0],["MF",0,0],["RHO",0.005,39.2],["Q1",0.027,26.7],["T2",0.003,315.4],["R2",0.001,166.3],["2Q1",0.004,21.4],["P1",0.038,46.8],["2SM2",0.001,298],["M3",0.001,33.3],["L2",0.002,28.5],["2MK3",0.001,218.2],["K2",0.003,4.1],["M8",0,0],["MS4",0.002,265.9]]},{"id":"1612340","name":"Honolulu","state":"HI","lat":21.3033,"lon":-157.8645,"off":0.251,"mn":0.389,"gt":0.58,"nAll":37,"form":1.013,"rms":0.26,"max":1,"nPts":8760,"nEv":1386,"dt":1.02,"dh":0.18,"con":[["M2",0.171,59.4],["S2",0.056,54.7],["N2",0.033,48.8],["K1",0.149,226.8],["M4",0.001,195.3],["O1",0.081,215.9],["M6",0.001,229.7],["MK3",0.001,342.6],["S4",0,0],["MN4",0.001,92.9],["NU2",0.007,56],["S6",0,0],["MU2",0.004,7.8],["2N2",0.004,39.9],["OO1",0.005,251.7],["LAM2",0.001,76.2],["S1",0.002,210],["M1",0.005,232.5],["J1",0.01,238.3],["MM",0.005,43.4],["SSA",0,0],["SA",0.048,177.7],["MSF",0,0],["MF",0.006,44.3],["RHO",0.002,195.4],["Q1",0.014,209.6],["T2",0.004,43.6],["R2",0.001,357.3],["2Q1",0.001,231],["P1",0.045,224.9],["2SM2",0.001,199.8],["M3",0.001,164.1],["L2",0.004,49.3],["2MK3",0,0],["K2",0.016,45.7],["M8",0,0],["MS4",0.001,104]]},{"id":"9414290","name":"San Francisco","state":"CA","lat":37.8063,"lon":-122.4659,"off":0.951,"mn":1.248,"gt":1.78,"nAll":37,"form":0.842,"rms":0.67,"max":2.6,"nPts":8760,"nEv":1410,"dt":0.77,"dh":0.46,"con":[["M2",0.576,208.2],["S2",0.137,216.2],["N2",0.122,183.2],["K1",0.37,225.4],["M4",0.022,136.8],["O1",0.23,208.4],["M6",0.002,7.3],["MK3",0.018,124.1],["S4",0,0],["MN4",0.008,112],["NU2",0.026,189.9],["S6",0,0],["MU2",0.007,100.2],["2N2",0.013,153.3],["OO1",0.012,260],["LAM2",0.007,214.3],["S1",0.007,282.6],["M1",0.011,237.5],["J1",0.019,244.3],["MM",0,0],["SSA",0.03,272.3],["SA",0.044,200.2],["MSF",0,0],["MF",0.015,153.1],["RHO",0.009,200],["Q1",0.041,202.4],["T2",0.009,204.6],["R2",0.001,126.8],["2Q1",0.006,208.6],["P1",0.114,222.1],["2SM2",0.003,37.3],["M3",0.003,37.6],["L2",0.018,229.6],["2MK3",0.014,92.2],["K2",0.04,206],["M8",0.001,108.5],["MS4",0.01,149]]},{"id":"9435380","name":"South Beach","state":"OR","lat":44.6254,"lon":-124.0449,"off":1.358,"mn":1.91,"gt":2.543,"nAll":37,"form":0.617,"rms":0.85,"max":3.8,"nPts":8760,"nEv":1410,"dt":0.66,"dh":0.57,"con":[["M2",0.887,231.2],["S2",0.242,259.3],["N2",0.184,207.5],["K1",0.434,238.1],["M4",0.012,198.8],["O1",0.263,221.4],["M6",0.008,298.3],["MK3",0.003,196.9],["S4",0.001,349.7],["MN4",0.005,180.3],["NU2",0.037,210.4],["S6",0.001,123.6],["MU2",0.015,203.9],["2N2",0.021,182.5],["OO1",0.014,274.4],["LAM2",0.007,223.2],["S1",0.012,5.4],["M1",0.015,257.9],["J1",0.024,256],["MM",0,0],["SSA",0.027,234],["SA",0.122,285.9],["MSF",0,0],["MF",0.025,183],["RHO",0.009,211.9],["Q1",0.046,214.2],["T2",0.015,251.7],["R2",0.002,213.6],["2Q1",0.005,214.4],["P1",0.134,233.9],["2SM2",0.002,54.2],["M3",0,0],["L2",0.022,235.9],["2MK3",0.002,349],["K2",0.064,250.6],["M8",0.002,260.4],["MS4",0.007,239.9]]},{"id":"9447130","name":"Seattle","state":"WA","lat":47.6026,"lon":-122.3393,"off":2.024,"mn":2.334,"gt":3.462,"nAll":37,"form":0.971,"rms":1.47,"max":5.9,"nPts":8760,"nEv":1410,"dt":0.98,"dh":1.03,"con":[["M2",1.063,10.8],["S2",0.268,36.8],["N2",0.214,341.1],["K1",0.834,276.8],["M4",0.021,200.7],["O1",0.459,254.6],["M6",0.009,312.8],["MK3",0.036,79.3],["S4",0.002,254.3],["MN4",0.009,172.7],["NU2",0.044,355.5],["S6",0,0],["MU2",0.034,238.9],["2N2",0.023,313.1],["OO1",0.031,330.2],["LAM2",0.02,49.9],["S1",0.021,45],["M1",0.024,304.1],["J1",0.043,313.4],["MM",0,0],["SSA",0.024,217],["SA",0.07,283.2],["MSF",0,0],["MF",0.015,157],["RHO",0.015,245],["Q1",0.073,248.9],["T2",0.016,38],["R2",0.003,11.2],["2Q1",0.01,265.5],["P1",0.257,276.2],["2SM2",0.008,284.4],["M3",0.004,178],["L2",0.049,58.7],["2MK3",0.035,48.5],["K2",0.079,37.7],["M8",0.001,204.4],["MS4",0.012,229.3]]},{"id":"9455920","name":"Anchorage","state":"AK","lat":61.2375,"lon":-149.8904,"off":5.02,"mn":7.982,"gt":8.889,"nAll":120,"form":0.232,"rms":22.41,"max":94.1,"nPts":8760,"nEv":1411,"dt":12.07,"dh":17.73,"con":[["M2",3.505,105.2],["S2",0.977,147.4],["N2",0.597,79.2],["K1",0.671,342.1],["M4",0.271,80.7],["O1",0.371,325],["M6",0.154,18.2],["MK3",0.082,8.8],["S4",0.02,207],["MN4",0.096,60],["NU2",0.172,82.3],["S6",0.002,278.4],["MU2",0.212,234],["2N2",0.057,48.1],["OO1",0.018,79.3],["LAM2",0.093,111.1],["S1",0.003,74.2],["M1",0.03,40.2],["J1",0.025,65.2],["MM",0.051,36.1],["SSA",0.024,283],["SA",0.096,217.4],["MSF",0.135,39.6],["MF",0.025,94.7],["RHO",0.014,296.2],["Q1",0.06,330.6],["T2",0.054,128.7],["R2",0.011,233.5],["2Q1",0.005,328.4],["P1",0.176,340.9],["2SM2",0.057,348.6],["M3",0.018,148],["L2",0.211,125.2],["2MK3",0.099,21.2],["K2",0.271,138.1],["M8",0.045,346.2],["MS4",0.175,128.2]]}];
+
+/* ---------------- helpers ---------------- */
+const $ = s => document.getElementById(s);
+const SVGNS = 'http://www.w3.org/2000/svg';
+const el = (n, a) => { const e = document.createElementNS(SVGNS, n);
+  for (const k in a) e.setAttribute(k, a[k]); return e; };
+const pad2 = n => String(n).padStart(2, '0');
+const fmtUTC = j => { const d = new Date((j - 2440587.5) * 86400000);
+  return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth()+1) + '-' + pad2(d.getUTCDate()) +
+         ' ' + pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ' UTC'; };
+const CLASS = f => f < 0.25 ? 'semidiurnal' : f < 1.5 ? 'mixed, semidiurnal'
+                 : f < 3 ? 'mixed, diurnal' : 'diurnal';
+const DESCR = {M2:'principal lunar',S2:'principal solar',N2:'larger lunar elliptic',
+  K1:'lunisolar diurnal',O1:'principal lunar diurnal',P1:'principal solar diurnal',
+  K2:'lunisolar semidiurnal',Q1:'larger lunar elliptic diurnal',SA:'solar annual',
+  SSA:'solar semiannual',M4:'lunar quarter-diurnal',M6:'lunar sixth-diurnal',
+  MF:'lunar fortnightly',MM:'lunar monthly',NU2:'larger lunar evectional',
+  L2:'smaller lunar elliptic',T2:'larger solar elliptic',MS4:'lunisolar quarter-diurnal',
+  MN4:'lunar quarter-diurnal','2N2':'lunar elliptic second order',MU2:'variational',
+  LAM2:'smaller lunar evectional',S1:'solar diurnal',M1:'smaller lunar diurnal',
+  J1:'smaller lunar elliptic diurnal',OO1:'lunar diurnal second order',
+  '2Q1':'lunar elliptic diurnal second order',RHO:'larger lunar evectional diurnal',
+  MSF:'lunisolar synodic fortnightly',R2:'smaller solar elliptic','2SM2':'shallow water semidiurnal',
+  M3:'lunar terdiurnal',MK3:'shallow water terdiurnal','2MK3':'shallow water terdiurnal',
+  S4:'solar quarter-diurnal',S6:'solar sixth-diurnal',M8:'lunar eighth-diurnal'};
+
+/* degrees per hour, from the Doodson coefficients */
+const RATE = [14.4920521, 0.5490165, 0.0410686, 0.0046418, -0.0022064, 0.0000020];
+const speedOf = name => CONST[name].d.reduce((s, c, i) => s + c*RATE[i], 0);
+
+/* ---------------- state ---------------- */
+let ST, ORD, nCrank = 1, jd, running = true, last = 0, rate = 5.4;
+let ERR = [], SC = {lo:0, hi:1}, g = {};
+
+/* ---------------- geometry ---------------- */
+const MX0 = 28, MX1 = 972, PITCH_MAX = 92;
+const YW = 62, RWMAX = 16, ROD = 58, RAIL = 186;
+const CH_TOP = 224, CH_BOT = 440, CX0 = MX0 + 40, DAYS = 4.5;
+const yOf = v => CH_BOT - (v - SC.lo)/(SC.hi - SC.lo)*(CH_BOT - CH_TOP);
+
+/* one pass over 2026: convergence curve + a stable vertical scale */
+function analyse(){
+  const j0 = jdFromUTC(2026,1,1,0,0), N = 8760, K = ORD.length;
+  const per = new Array(N), full = new Float64Array(N), part = new Float64Array(N);
+  let lo = 1e9, hi = -1e9;
+  for (let t = 0; t < N; t++){
+    const j = j0 + t/24, a = astro(j), nf = nodal(a);
+    const row = new Float64Array(K); let s = ST.off;
+    for (let i = 0; i < K; i++){ const c = ORD[i], d = CONST[c.name], fu = nf[d.n];
+      const V = d.d[0]*a.tau + d.d[1]*a.s + d.d[2]*a.h + d.d[3]*a.p + d.d[4]*a.N + d.d[5]*a.p1 + d.c;
+      row[i] = fu[0]*c.amp*Math.cos((V + fu[1] - c.kappa)*Math.PI/180); s += row[i]; }
+    per[t] = row; full[t] = s; if (s < lo) lo = s; if (s > hi) hi = s;
+  }
+  const out = [];
+  for (let i = 0; i < K; i++){ let se = 0;
+    for (let t = 0; t < N; t++){ part[t] += per[t][i];
+      const e = (part[t] + ST.off) - full[t]; se += e*e; }
+    out.push(Math.sqrt(se/N)*100); }
+  const m = (hi - lo)*0.08 + 0.04;
+  SC = {lo: lo - m, hi: hi + m};
+  return out;
+}
+
+function setStation(id){
+  ST = STATIONS.find(s => s.id === id);
+  ORD = ST.con.map(c => ({name:c[0], amp:c[1], kappa:c[2], speed:speedOf(c[0])}))
+             .sort((a, b) => b.amp - a.amp);
+  $('nc').max = ORD.length;
+  if (nCrank > ORD.length) nCrank = ORD.length;
+  ERR = analyse();
+  build();
+}
+
+/* ---------------- construct the instrument ---------------- */
+function build(){
+  const svg = $('mach'); svg.textContent = '';
+  const n = nCrank, dx = Math.min((MX1 - MX0)/n, PITCH_MAX), cw = Math.min(dx*0.40, RWMAX);
+  const rp = Math.max(2.2, cw*0.22);
+  g = {pins:[], yokes:[], n, dx, cw, rp};
+
+  /* chart */
+  const ch = el('g'); svg.appendChild(ch);
+  ch.appendChild(el('rect',{x:CX0, y:CH_TOP, width:MX1-CX0, height:CH_BOT-CH_TOP,
+    fill:'var(--paper)', stroke:'var(--rule)', 'stroke-width':1, rx:3}));
+  g.grid = el('g'); ch.appendChild(g.grid);
+  g.ref = el('path',{fill:'none', stroke:'var(--faint)', 'stroke-width':1.1,
+    'stroke-dasharray':'4 4', 'stroke-opacity':.9}); ch.appendChild(g.ref);
+  g.ink = el('path',{fill:'none', stroke:'var(--trace)', 'stroke-width':2,
+    'stroke-linejoin':'round', 'stroke-linecap':'round'}); ch.appendChild(g.ink);
+  g.axis = el('g'); ch.appendChild(g.axis);
+
+  /* rails */
+  svg.appendChild(el('line',{x1:MX0, y1:RAIL, x2:MX1, y2:RAIL,
+    stroke:'var(--rule)', 'stroke-width':1}));
+  svg.appendChild(el('line',{x1:MX0, y1:YW, x2:MX0 + dx*n, y2:YW,
+    stroke:'var(--rule)', 'stroke-width':1, 'stroke-dasharray':'2 6'}));
+
+  /* crank units */
+  const bank = el('g'); svg.appendChild(bank);
+  const maxAmp = ORD[0].amp;
+  for (let i = 0; i < n; i++){
+    const cx = MX0 + dx*(i + 0.5);
+    bank.appendChild(el('circle',{cx, cy:YW, r:cw, fill:'none',
+      stroke:'var(--brass-2)', 'stroke-width':1.1}));
+    bank.appendChild(el('circle',{cx, cy:YW, r:1.4, fill:'var(--brass)'}));
+    /* crank arm: pin radius = this constituent's amplitude */
+    const pr = Math.max(0.5, cw*0.84*(ORD[i].amp/maxAmp));
+    const arm = el('g');
+    arm.appendChild(el('line',{x1:0, y1:0, x2:0, y2:-pr,
+      stroke:'var(--brass)', 'stroke-width':1.3}));
+    arm.appendChild(el('circle',{cx:0, cy:-pr, r:Math.max(1.4, cw*0.13), fill:'var(--brass)'}));
+    const hub = el('g',{transform:`translate(${cx},${YW})`}); hub.appendChild(arm);
+    bank.appendChild(hub);
+    g.pins.push({arm, pr, cx});
+    /* scotch yoke: slot rides the pin, rod carries a movable pulley */
+    const yk = el('g');
+    yk.appendChild(el('line',{x1:cx-cw*0.98, y1:0, x2:cx+cw*0.98, y2:0,
+      stroke:'var(--faint)', 'stroke-width':1.6, 'stroke-linecap':'round'}));
+    yk.appendChild(el('line',{x1:cx, y1:0, x2:cx, y2:ROD, stroke:'var(--faint)', 'stroke-width':1}));
+    yk.appendChild(el('circle',{cx, cy:ROD, r:rp, fill:'var(--paper)',
+      stroke:'var(--faint)', 'stroke-width':1.2}));
+    bank.appendChild(yk); g.yokes.push(yk);
+    /* fixed pulley on the rail, between this unit and the next */
+    bank.appendChild(el('circle',{cx:cx + dx/2, cy:RAIL, r:rp*0.8, fill:'var(--paper)',
+      stroke:'var(--rule)', 'stroke-width':1}));
+    if (dx > 22){
+      const t = el('text',{x:cx, y:RAIL+16, 'text-anchor':'middle',
+        'font-family':'ui-monospace,Menlo,monospace', 'font-size': dx > 44 ? 11 : 9,
+        fill:'var(--faint)'});
+      t.textContent = ORD[i].name; bank.appendChild(t);
+    }
+  }
+  /* the wire, and the pen it carries */
+  g.wire = el('polyline',{fill:'none', stroke:'var(--ink)', 'stroke-width':1.3,
+    'stroke-opacity':.8, 'stroke-linejoin':'round'}); svg.appendChild(g.wire);
+  g.drop = el('line',{x1:MX1, y1:RAIL, x2:MX1, stroke:'var(--ink)',
+    'stroke-width':1.3, 'stroke-opacity':.8}); svg.appendChild(g.drop);
+  g.pen = el('circle',{r:3, fill:'var(--trace)'}); svg.appendChild(g.pen);
+  svg.appendChild(el('circle',{cx:MX0, cy:RAIL, r:3, fill:'var(--faint)'}));
+
+  $('ncv').textContent = n;
+  drawAxis();
+  frame(0, true);
+}
+
+function drawAxis(){
+  g.grid.textContent = ''; g.axis.textContent = '';
+  const rng = SC.hi - SC.lo;
+  const step = rng > 7 ? 2 : rng > 3.5 ? 1 : rng > 1.6 ? 0.5 : rng > 0.7 ? 0.25 : 0.1;
+  for (let v = Math.ceil(SC.lo/step)*step; v <= SC.hi; v += step){
+    const y = yOf(v);
+    g.grid.appendChild(el('line',{x1:CX0, y1:y, x2:MX1, y2:y,
+      stroke:'var(--rule)', 'stroke-width':1, 'stroke-opacity':.75}));
+    const t = el('text',{x:CX0-6, y:y+3.5, 'text-anchor':'end',
+      'font-family':'ui-monospace,Menlo,monospace', 'font-size':10, fill:'var(--faint)'});
+    t.textContent = v.toFixed(step < 1 ? (step < 0.25 ? 1 : 2) : 0) + ' m';
+    g.axis.appendChild(t);
+  }
+}
+
+/* ---------------- one frame ---------------- */
+function frame(dtms, force){
+  if (running && !force) jd += dtms/1000 * rate/24;
+  const n = g.n, K = ORD.length;
+
+  /* cranks and yokes at the present instant */
+  const a = astro(jd), nf = nodal(a), pts = [MX0, RAIL];
+  for (let i = 0; i < n; i++){
+    const c = ORD[i], d = CONST[c.name], fu = nf[d.n];
+    const V = d.d[0]*a.tau + d.d[1]*a.s + d.d[2]*a.h + d.d[3]*a.p + d.d[4]*a.N + d.d[5]*a.p1 + d.c;
+    const ang = V + fu[1] - c.kappa;
+    g.pins[i].arm.setAttribute('transform', `rotate(${ang.toFixed(2)})`);
+    const dy = -g.pins[i].pr * Math.cos(ang*Math.PI/180);
+    g.yokes[i].setAttribute('transform', `translate(0,${(YW + dy).toFixed(2)})`);
+    pts.push(g.pins[i].cx, (YW + dy + ROD - g.rp).toFixed(1));
+    pts.push(g.pins[i].cx + g.dx/2, RAIL);
+  }
+  pts.push(MX1, RAIL);
+  g.wire.setAttribute('points', pts.join(' '));
+
+  /* the chart: partial sum in ink, full prediction dashed */
+  const N = 420, t1 = jd, t0 = jd - DAYS;
+  let dF = '', dP = '', penH = 0;
+  for (let k = 0; k <= N; k++){
+    const j = t0 + (t1 - t0)*k/N, x = CX0 + (MX1 - CX0)*k/N;
+    const aa = astro(j), nn = nodal(aa);
+    let sp = ST.off, sf = ST.off;
+    for (let i = 0; i < K; i++){
+      const c = ORD[i], d = CONST[c.name], fu = nn[d.n];
+      const V = d.d[0]*aa.tau + d.d[1]*aa.s + d.d[2]*aa.h + d.d[3]*aa.p
+              + d.d[4]*aa.N + d.d[5]*aa.p1 + d.c;
+      const v = fu[0]*c.amp*Math.cos((V + fu[1] - c.kappa)*Math.PI/180);
+      sf += v; if (i < n) sp += v;
+    }
+    dF += (k ? 'L' : 'M') + x.toFixed(1) + ' ' + yOf(sf).toFixed(1);
+    dP += (k ? 'L' : 'M') + x.toFixed(1) + ' ' + yOf(sp).toFixed(1);
+    if (k === N) penH = sp;
+  }
+  g.ref.setAttribute('d', dF);
+  g.ink.setAttribute('d', dP);
+  const py = yOf(penH);
+  g.drop.setAttribute('y2', py.toFixed(1));
+  g.pen.setAttribute('cx', MX1); g.pen.setAttribute('cy', py.toFixed(1));
+
+  const c = ORD[n-1];
+  $('rClock').textContent = fmtUTC(jd);
+  $('rPen').textContent = penH.toFixed(3) + ' m';
+  $('rCon').textContent = c.name + ' · ' + (DESCR[c.name] || '') + ' · ' +
+    (c.speed/15).toFixed(3) + ' cycles/day · ' +
+    (c.amp*100).toFixed(c.amp < 0.01 ? 2 : 1) + ' cm';
+  $('rErr').textContent = ERR.length ? ERR[n-1].toFixed(1) + ' cm RMS' : '—';
+}
+
+function tick(ts){ const d = last ? ts - last : 0; last = ts;
+  if (running) frame(Math.min(d, 120)); requestAnimationFrame(tick); }
+
+/* ---------------- wiring ---------------- */
+(function init(){
+  const sel = $('st');
+  STATIONS.forEach(s => { const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.name + ', ' + s.state;
+    sel.appendChild(o); });
+  jd = jdFromUTC(2026, 8, 26, 0, 0);
+  $('dt').value = '2026-08-26';
+  sel.value = '9447130';
+  nCrank = 1; $('nc').value = 1;
+  setStation('9447130');
+
+  sel.onchange = e => setStation(e.target.value);
+  $('nc').oninput = e => { nCrank = +e.target.value; build(); };
+  $('dt').onchange = e => { const p = e.target.value.split('-');
+    if (p.length === 3 && p[0].length === 4){
+      jd = jdFromUTC(+p[0], +p[1], +p[2], 0, 0); frame(0, true); } };
+  $('sp').oninput = e => { rate = 0.5*Math.pow(1.12, +e.target.value - 1); };
+  $('go').onclick = () => { running = !running; $('go').textContent = running ? 'Pause' : 'Run'; };
+
+  const tb = document.querySelector('#vtab tbody');
+  STATIONS.forEach(s => {
+    const bad = s.rms > 5, cl = bad ? ' class="hi"' : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${s.name}, ${s.state}</td>` +
+      `<td style="color:var(--faint)">${CLASS(s.form)}</td>` +
+      `<td>${s.gt.toFixed(2)} m</td><td${cl}>${s.rms.toFixed(2)} cm</td>` +
+      `<td${cl}>${s.max.toFixed(1)} cm</td><td${cl}>${s.dt.toFixed(2)} min</td>` +
+      `<td${cl}>${s.dh.toFixed(2)} cm</td>`;
+    tb.appendChild(tr); });
+  $('tot1').textContent = (STATIONS.length*8760).toLocaleString('en-US');
+
+  requestAnimationFrame(tick);
+})();
+
+</script>
+</body>
+</html>
