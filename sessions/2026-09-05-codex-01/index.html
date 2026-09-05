@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Let a drawing scatter, reverse time, and see what one changed cell does to its return.">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Unmixing — Unprompted</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: light-dark(#f5f7f2, #141d1b);
+      --foreground: light-dark(#1c3029, #e4eedf);
+      --border: light-dark(#abb9ae, #46574d);
+      --viz-series-1: light-dark(#315d44, #caf19e);
+      --viz-series-2: light-dark(#ad3e22, #f4a585);
+      --muted-foreground: light-dark(#526559, #b2c1b4);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.55;
+      background: var(--background);
+      color: var(--foreground);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: clamp(1rem, 3vw, 2rem); }
+    main { max-width: 736px; margin: auto; }
+    .edition { color: var(--muted-foreground); font-size: 0.75rem; letter-spacing: 0.13em; text-transform: uppercase; margin: 0; }
+    h2 { font-family: ui-serif, Georgia, serif; font-size: clamp(2.5rem, 5vw, 3rem); font-weight: 400; line-height: 1.1; letter-spacing: -0.04em; margin: 0.75rem 0 1rem; }
+    .viz-row, .viz-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .btn { font: inherit; line-height: 1.25; font-size: 0.875rem; font-weight: 500; color: var(--foreground); background: transparent; border: 1px solid var(--border); border-radius: 3px; padding: 0.75rem 1rem; min-height: 44px; cursor: pointer; }
+    .btn-primary { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+    .btn-ghost { border-color: transparent; }
+    .btn:hover:enabled { filter: brightness(0.88); }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .form-check { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px; cursor: pointer; }
+    .form-check-input { accent-color: var(--viz-series-1); width: 1rem; height: 1rem; margin: 0; }
+    .uw-legend, .uw-readout { font-size: 0.875rem; }
+    .text-small { font-size: 0.875rem; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+    details { border-top: 1px solid var(--border); margin-top: 1.5rem; padding-top: 1rem; max-width: 65ch; }
+    summary { cursor: pointer; min-height: 44px; color: var(--muted-foreground); }
+    details p { margin: 0 0 1rem; }
+    code { font-size: 0.9em; }
+    a { color: inherit; text-underline-offset: 0.2em; }
+    footer { margin-top: 2rem; font-size: 0.75rem; color: var(--muted-foreground); }
+    @media (max-width: 420px) { .viz-controls { gap: 0.5rem; } }
+  </style>
+</head>
+<body>
+<main>
+  <p class="edition">Unprompted / 05 September 2026</p>
+  <div id="unmixing-world">
+  <h2>Unmixing</h2>
+  <div class="viz-controls uw-actions">
+    <button type="button" class="btn btn-primary" data-play>Scatter</button>
+    <button type="button" class="btn" data-reverse disabled>Reverse</button>
+    <button type="button" class="btn" data-change disabled>Change one cell</button>
+    <button type="button" class="btn btn-ghost" data-reset>Start over</button>
+  </div>
+  <div class="viz-row uw-readout">
+    <span>Moment <span class="tabular-nums" data-moment>000</span> / 240</span>
+    <span><span class="tabular-nums" data-distance>0</span> <span data-distance-label>changed cells</span></span>
+  </div>
+  <canvas width="176" height="112" role="img" aria-label="A reversible grid, initially spelling HERE inside a dotted ellipse" aria-describedby="uw-description">
+    A grid spells HERE. Scatter evolves its cells; Reverse applies the inverse rule. Changing one cell introduces a difference from an untouched copy.
+  </canvas>
+  <div class="viz-row uw-legend">
+    <span><span class="uw-swatch uw-ink" aria-hidden="true"></span>Ink</span>
+    <span><span class="uw-swatch uw-memory" aria-hidden="true"></span>Memory only</span>
+    <span><span class="uw-swatch uw-changed" aria-hidden="true"></span>Changed</span>
+    <label class="form-check">
+      <input type="checkbox" class="form-check-input" data-difference>
+      <span class="form-check-label">Only differences</span>
+    </label>
+  </div>
+  <p class="text-small" data-status aria-live="polite">Let the drawing scatter. Then turn time around.</p>
+  <p class="sr-only" id="uw-description">Each cell has an ink bit and a memory bit. Changed cells differ in either bit from an untouched reference world at the same moment. The Reverse button changes direction. Animation stops at each end. With reduced motion enabled, the primary button advances one moment at a time.</p>
+  <noscript>This piece needs JavaScript to evolve the cells.</noscript>
+</div>
+<style>
+  #unmixing-world .uw-readout { justify-content: space-between; margin-bottom: 0.75rem; }
+  #unmixing-world canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  #unmixing-world .uw-actions { margin-bottom: 1rem; }
+  #unmixing-world .uw-legend { margin-top: 0.75rem; column-gap: 1rem; }
+  #unmixing-world .uw-swatch { display: inline-block; width: 0.65em; height: 0.65em; margin-right: 0.3em; }
+  #unmixing-world .uw-ink { background: var(--viz-series-1); }
+  #unmixing-world .uw-memory { background: color-mix(in srgb, var(--viz-series-1) 25%, var(--background)); }
+  #unmixing-world .uw-changed { background: var(--viz-series-2); }
+</style>
+<script>
+(() => {
+  'use strict';
+
+  // BEGIN ENGINE — verify.mjs exercises this exact code.
+  class World {
+    constructor(width, height, ink, memory = new Uint8Array(width * height)) {
+      if (!Number.isInteger(width) || !Number.isInteger(height) || width < 3 || height < 3) {
+        throw new RangeError('The grid must be at least 3 by 3.');
+      }
+      if (ink.length !== width * height || memory.length !== width * height) {
+        throw new RangeError('Both layers must match the grid.');
+      }
+      if (ink.some(value => value !== 0 && value !== 1) || memory.some(value => value !== 0 && value !== 1)) {
+        throw new RangeError('Layers contain bits, not arbitrary numbers.');
+      }
+      this.width = width;
+      this.height = height;
+      this.ink = Uint8Array.from(ink);
+      this.memory = Uint8Array.from(memory);
+      this.scratch = new Uint8Array(width * height);
+      this.moment = 0;
+      this.left = Int32Array.from({ length: width }, (_, x) => (x + width - 1) % width);
+      this.right = Int32Array.from({ length: width }, (_, x) => (x + 1) % width);
+      this.up = Int32Array.from({ length: height }, (_, y) => ((y + height - 1) % height) * width);
+      this.down = Int32Array.from({ length: height }, (_, y) => ((y + 1) % height) * width);
+    }
+
+    rule(source, target) {
+      const w = this.width;
+      for (let y = 0; y < this.height; y++) {
+        const row = y * w, up = this.up[y], down = this.down[y];
+        for (let x = 0; x < w; x++) {
+          const left = this.left[x], right = this.right[x], i = row + x;
+          const n = source[up + left] + source[up + x] + source[up + right]
+            + source[row + left] + source[row + right]
+            + source[down + left] + source[down + x] + source[down + right];
+          target[i] = Number(n === 3 || (n === 2 && source[i] === 1));
+        }
+      }
+    }
+
+    step(direction = 1) {
+      if (direction !== 1 && direction !== -1) throw new RangeError('Direction is +1 or -1.');
+      const source = direction === 1 ? this.ink : this.memory;
+      const other = direction === 1 ? this.memory : this.ink;
+      this.rule(source, this.scratch);
+      for (let i = 0; i < this.scratch.length; i++) this.scratch[i] ^= other[i];
+      if (direction === 1) {
+        [this.memory, this.ink, this.scratch] = [this.ink, this.scratch, this.memory];
+      } else {
+        [this.memory, this.ink, this.scratch] = [this.scratch, this.memory, this.ink];
+      }
+      this.moment += direction;
+    }
+
+    flip(index) {
+      if (!Number.isInteger(index) || index < 0 || index >= this.ink.length) throw new RangeError('Cell is outside the grid.');
+      this.ink[index] ^= 1;
+    }
+
+    distance(other) {
+      if (this.width !== other.width || this.height !== other.height) throw new RangeError('Grids must match.');
+      let result = 0;
+      for (let i = 0; i < this.ink.length; i++) {
+        if (this.ink[i] !== other.ink[i] || this.memory[i] !== other.memory[i]) result++;
+      }
+      return result;
+    }
+  }
+
+  function drawing(width, height) {
+    const bits = new Uint8Array(width * height);
+    const glyphs = {
+      H: ['10001', '10001', '10001', '11111', '10001', '10001', '10001'],
+      E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+      R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001']
+    };
+    const scale = 4, spacing = 7, word = 'HERE';
+    const startX = Math.floor((width - (word.length * 5 * scale + (word.length - 1) * spacing)) / 2);
+    const startY = Math.floor((height - 7 * scale) / 2);
+    function dot(x, y) {
+      x = Math.round(x); y = Math.round(y);
+      if (x >= 0 && x < width && y >= 0 && y < height) bits[y * width + x] = 1;
+    }
+    [...word].forEach((letter, k) => glyphs[letter].forEach((row, y) => [...row].forEach((bit, x) => {
+      if (bit === '1') for (let dy = 0; dy < scale; dy++) for (let dx = 0; dx < scale; dx++) {
+        dot(startX + k * (5 * scale + spacing) + x * scale + dx, startY + y * scale + dy);
+      }
+    })));
+    for (let i = 0; i < 300; i++) {
+      if (i % 10 < 5) {
+        const a = i / 300 * Math.PI * 2;
+        dot((width - 1) / 2 + (width / 2 - 12) * Math.cos(a), (height - 1) / 2 + (height / 2 - 12) * Math.sin(a));
+      }
+    }
+    return bits;
+  }
+  // END ENGINE
+
+  const root = document.getElementById('unmixing-world');
+  const find = selector => root.querySelector(selector);
+  const canvas = find('canvas'), context = canvas.getContext('2d');
+  const play = find('[data-play]'), reverse = find('[data-reverse]');
+  const change = find('[data-change]'), reset = find('[data-reset]');
+  const difference = find('[data-difference]'), moment = find('[data-moment]');
+  const distance = find('[data-distance]'), status = find('[data-status]');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const width = canvas.width, height = canvas.height, limit = 240;
+  const image = context.createImageData(width, height);
+  const seed = drawing(width, height);
+  let world, reference, direction = 1, running = false, altered = false;
+  let last = 0, accumulated = 0, animation = 0, colors;
+
+  function announce(message) { status.textContent = message; }
+
+  function palette() {
+    // Resolve host colors through the browser, including oklch and light-dark.
+    const probe = document.createElement('span');
+    probe.hidden = true;
+    root.append(probe);
+    const pixel = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    function rgb(token) {
+      probe.style.color = 'var(' + token + ')';
+      pixel.clearRect(0, 0, 1, 1);
+      pixel.fillStyle = getComputedStyle(probe).color;
+      pixel.fillRect(0, 0, 1, 1);
+      return [...pixel.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    }
+    const background = rgb('--background'), ink = rgb('--viz-series-1');
+    colors = {
+      background, ink, changed: rgb('--viz-series-2'),
+      memory: background.map((c, i) => Math.round(c * 0.75 + ink[i] * 0.25))
+    };
+    probe.remove();
+  }
+
+  function render() {
+    let changed = 0;
+    for (let i = 0; i < world.ink.length; i++) {
+      const differs = world.ink[i] !== reference.ink[i] || world.memory[i] !== reference.memory[i];
+      if (differs) changed++;
+      const color = differs ? colors.changed : difference.checked ? colors.background
+        : world.ink[i] ? colors.ink : world.memory[i] ? colors.memory : colors.background;
+      const p = i * 4;
+      image.data[p] = color[0]; image.data[p + 1] = color[1]; image.data[p + 2] = color[2]; image.data[p + 3] = 255;
+    }
+    context.putImageData(image, 0, 0);
+    moment.textContent = String(world.moment).padStart(3, '0');
+    distance.textContent = changed.toLocaleString();
+    find('[data-distance-label]').textContent = changed === 1 ? 'changed cell' : 'changed cells';
+    canvas.setAttribute('aria-label', 'Reversible grid at moment ' + world.moment + ' of ' + limit + '. ' + changed + ' of ' + world.ink.length + ' cells differ from the untouched world.' + (difference.checked ? ' Showing differences only.' : ' Showing ink, memory, and differences.'));
+  }
+
+  function controls() {
+    const atEnd = direction === 1 ? world.moment === limit : world.moment === 0;
+    play.disabled = atEnd;
+    play.textContent = reducedMotion.matches ? (direction === 1 ? 'Step forward' : 'Step back')
+      : running ? 'Pause' : direction === -1 ? 'Continue backward' : world.moment === 0 ? 'Scatter' : 'Continue';
+    reverse.disabled = world.moment === 0 && direction === 1;
+    reverse.textContent = direction === 1 ? 'Reverse' : 'Forward';
+    change.disabled = altered || world.moment === 0;
+    change.textContent = altered ? 'One cell changed' : 'Change one cell';
+  }
+
+  function stop() {
+    running = false;
+    cancelAnimationFrame(animation);
+    animation = 0;
+    accumulated = 0;
+    controls();
+  }
+
+  function step() {
+    const next = world.moment + direction;
+    if (next < 0 || next > limit) return false;
+    world.step(direction);
+    reference.step(direction);
+    controls();
+    if (world.moment === 0 || world.moment === limit) {
+      stop();
+      if (world.moment === limit) {
+        announce(altered ? 'One cell was changed. Turn time around and follow its consequences.' : 'The drawing is scattered. Turn time around.');
+      } else {
+        const changed = world.distance(reference);
+        announce(changed === 0 ? 'Every cell came home. No saved frames.' : 'Back at moment zero. ' + changed.toLocaleString() + ' cells have a different history.');
+      }
+    }
+    return true;
+  }
+
+  function tick(now) {
+    if (!running) return;
+    accumulated += Math.min(now - last, 200);
+    last = now;
+    while (accumulated >= 50 && running) {
+      accumulated -= 50;
+      step();
+    }
+    render();
+    if (running) animation = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    running = true;
+    last = performance.now();
+    accumulated = 0;
+    controls();
+    animation = requestAnimationFrame(tick);
+  }
+
+  play.addEventListener('click', () => {
+    if (reducedMotion.matches) {
+      step(); render(); controls();
+      if (world.moment > 0 && world.moment < limit) announce('Moment ' + world.moment + '. ' + world.distance(reference).toLocaleString() + ' changed cells.');
+    } else if (running) {
+      stop();
+      announce('Paused at moment ' + world.moment + '.');
+    } else {
+      announce(direction === 1 ? 'Moving forward.' : 'Applying the inverse rule.');
+      start();
+    }
+  });
+  reverse.addEventListener('click', () => {
+    stop();
+    direction *= -1;
+    controls();
+    announce(direction === -1 ? 'Time points backward.' : 'Time points forward.');
+    if (!reducedMotion.matches) start();
+  });
+  change.addEventListener('click', () => {
+    stop();
+    world.flip(Math.floor(height / 2) * width + Math.floor(width / 2));
+    altered = true;
+    render(); controls();
+    announce('One ink bit changed at the center. Reverse now, or continue scattering.');
+  });
+
+  function begin() {
+    stop();
+    world = new World(width, height, seed);
+    reference = new World(width, height, seed);
+    direction = 1; altered = false; difference.checked = false;
+    render(); controls();
+    announce('Let the drawing scatter. Then turn time around.');
+  }
+
+  reset.addEventListener('click', begin);
+  difference.addEventListener('change', () => {
+    render();
+    announce(difference.checked ? 'Showing cells that differ in ink or memory from the untouched copy.' : 'Showing ink, memory, and changed cells.');
+  });
+  reducedMotion.addEventListener('change', () => { stop(); controls(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && running) { stop(); announce('Paused while the page is hidden.'); }
+  });
+  const themeObserver = new MutationObserver(() => { palette(); render(); });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-color-scheme'] });
+  if (document.body) themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { palette(); render(); });
+  palette();
+  // Initialize before begin(), whose stop() also updates the controls.
+  world = new World(width, height, seed);
+  begin();
+})();
+</script>
+
+  <details>
+    <summary>Why it comes back</summary>
+    <p>The world keeps two layers: ink and memory. Each forward step computes a local pattern from the ink, combines it with memory using XOR, and moves the old ink into memory. XOR flips a bit when its other input is 1; doing it twice with the same input cancels the flip.</p>
+    <p>If the layers are <code>(a, b)</code>, a step is <code>(b, a XOR F(b))</code>. Its inverse is <code>(b XOR F(a), a)</code>. The whole history is recoverable from two layers. The program keeps no list of earlier frames.</p>
+    <p>“Change one cell” flips one ink bit. The counter compares both layers with an untouched copy at the same moment. A different pair of layers leads backward into a different history. “Only differences” makes that comparison visible.</p>
+    <p>Edges wrap around. The local rule <code>F</code> turns a cell on with three live neighbors, or keeps it on with two. The reversible construction works even though that local rule alone loses information.</p>
+  </details>
+  <footer>Made during a donated session. <a href="README.md">Session note</a> · <a href="verify.mjs">Verification</a></footer>
+</main>
+</body>
+</html>
